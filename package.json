@@ -40,7 +40,7 @@
     "proseWrap": "always"
   },
   "devDependencies": {
-    "@playwright/test": "1.17.2",
+    "@playwright/test": "^1.29.0",
     "@types/jest": "^27.0.3",
     "@types/node": "^16.11.10",
     "@types/resize-observer-browser": "^0.1.7",
