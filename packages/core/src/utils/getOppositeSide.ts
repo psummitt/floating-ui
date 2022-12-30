@@ -1,4 +1,5 @@
-import type {Side} from '../types';
+import type {Placement, Side} from '../types';
+import {getSide} from './getSide';
 
 const oppositeSideMap = {
   left: 'right',
@@ -7,6 +8,6 @@ const oppositeSideMap = {
   top: 'bottom',
 } as const;
 
-export function getOppositeSide(side: Side): Side {
-  return oppositeSideMap[side];
+export function getOppositeSide(placement: Placement): Side {
+  return oppositeSideMap[getSide(placement)];
 }
