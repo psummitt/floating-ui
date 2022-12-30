@@ -39,6 +39,7 @@ export {
   size,
   inline,
   detectOverflow,
+  rectToClientRect,
 } from '@floating-ui/core';
 
 export {autoUpdate} from './autoUpdate';
