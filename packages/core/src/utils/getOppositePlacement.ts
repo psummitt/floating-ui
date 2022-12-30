@@ -1,11 +1,11 @@
 import type {Side} from '../types';
 
-const oppositeSideMap = {
+export const oppositeSideMap = {
   left: 'right',
   right: 'left',
   bottom: 'top',
   top: 'bottom',
-};
+} as const;
 
 export function getOppositePlacement<T extends string>(placement: T): T {
   return placement.replace(
