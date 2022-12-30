@@ -40,7 +40,7 @@ export {
   inline,
   detectOverflow,
   rectToClientRect,
-  oppositeSideMap,
+  getOppositeSide,
 } from '@floating-ui/core';
 
 export {autoUpdate} from './autoUpdate';

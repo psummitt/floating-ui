@@ -180,7 +180,13 @@ declare const detectOverflow: (
 ) => Promise<SideObject>;
 
 export {autoPlacement, shift, arrow, size, flip, hide, detectOverflow};
-export {offset, limitShift, inline} from '@floating-ui/core';
+export {
+  offset,
+  limitShift,
+  inline,
+  rectToClientRect,
+  getOppositeSide,
+} from '@floating-ui/core';
 export type {
   Placement,
   Strategy,

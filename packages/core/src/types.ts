@@ -156,7 +156,7 @@ export type ElementContext = 'reference' | 'floating';
 
 export {computePosition} from './computePosition';
 export {rectToClientRect} from './utils/rectToClientRect';
-export {oppositeSideMap} from './utils/getOppositePlacement';
+export {getOppositeSide} from './utils/getOppositeSide';
 export {
   detectOverflow,
   Options as DetectOverflowOptions,

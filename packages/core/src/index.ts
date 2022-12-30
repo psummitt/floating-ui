@@ -11,4 +11,4 @@ export {size} from './middleware/size';
 export {inline} from './middleware/inline';
 
 export {rectToClientRect} from './utils/rectToClientRect';
-export {oppositeSideMap} from './utils/getOppositePlacement';
+export {getOppositeSide} from './utils/getOppositeSide';
