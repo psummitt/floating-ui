@@ -410,6 +410,8 @@ export function safePolygon<RT extends ReferenceType = ReferenceType>({
 
       if (isInsideRect) {
         return;
+      } else if (hasLanded) {
+        return close();
       }
 
       if (!isPointInPolygon([clientX, clientY], poly)) {
