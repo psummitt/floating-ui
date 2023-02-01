@@ -145,18 +145,24 @@ export const autoPlacement = (
     }
 
     const placementsSortedByLeastOverflow = allOverflows
-      .map(
-        (d) =>
-          [
-            d.placement,
-            !crossAxis
-              ? d.overflows.filter((a) => a > 0).reduce((acc, b) => acc + b, 0)
-              : d.overflows.slice(0, 2).reduce((acc, v) => acc + v, 0),
-          ] as const
-      )
+      .map((d) => {
+        const alignment = getAlignment(d.placement);
+        return [
+          d.placement,
+          alignment && crossAxis
+            ? // Check along the mainAxis and main crossAxis side.
+              d.overflows.slice(0, 2).reduce((acc, v) => acc + v, 0)
+            : alignment
+            ? // Filter only the sides that are overflowing.
+              d.overflows.filter((a) => a > 0).reduce((acc, v) => acc + v, 0)
+            : // Check only the mainAxis.
+              d.overflows[0],
+          d.overflows,
+        ] as const;
+      })
       .sort((a, b) => a[1] - b[1]);
     const placementThatFitsOnAllSides = placementsSortedByLeastOverflow.find(
-      (d) => d[1] <= 0
+      (d) => d[2].every((v) => v <= 0)
     )?.[0];
 
     const resetPlacement =
