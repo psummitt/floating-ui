@@ -2,10 +2,10 @@ import {getDocument} from './getDocument';
 import {getPlatform, getUserAgent} from './getPlatform';
 
 function getWindow(value: any) {
-  return getDocument(value).defaultView ?? window;
+  return getDocument(value).defaultView || window;
 }
 
-export function isElement(value: any): value is HTMLElement {
+export function isElement(value: any): value is Element {
   return value ? value instanceof getWindow(value).Element : false;
 }
 
@@ -65,4 +65,17 @@ export function isMac() {
   return (
     getPlatform().toLowerCase().startsWith('mac') && !navigator.maxTouchPoints
   );
+}
+
+export function isMouseLikePointerType(
+  pointerType: string | undefined,
+  strict?: boolean
+) {
+  // On some Linux machines with Chromium, mouse inputs return a `pointerType`
+  // of "pen": https://github.com/floating-ui/floating-ui/issues/2015
+  const values: Array<string | undefined> = ['mouse', 'pen'];
+  if (!strict) {
+    values.push('', undefined);
+  }
+  return values.includes(pointerType);
 }

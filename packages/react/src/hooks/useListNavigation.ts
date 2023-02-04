@@ -1,25 +1,26 @@
 import * as React from 'react';
 import {flushSync} from 'react-dom';
 import useLayoutEffect from 'use-isomorphic-layout-effect';
+
 import {
   useFloatingParentNodeId,
   useFloatingTree,
 } from '../components/FloatingTree';
 import type {ElementProps, FloatingContext, ReferenceType} from '../types';
-import {getDocument} from '../utils/getDocument';
 import {activeElement} from '../utils/activeElement';
-import {
-  isHTMLElement,
-  isVirtualClick,
-  isVirtualPointerEvent,
-  isMac,
-  isSafari,
-} from '../utils/is';
-import {stopEvent} from '../utils/stopEvent';
-import {useLatestRef} from './utils/useLatestRef';
-import {useEvent} from './utils/useEvent';
 import {contains} from '../utils/contains';
 import {enqueueFocus} from '../utils/enqueueFocus';
+import {getDocument} from '../utils/getDocument';
+import {
+  isHTMLElement,
+  isMac,
+  isSafari,
+  isVirtualClick,
+  isVirtualPointerEvent,
+} from '../utils/is';
+import {stopEvent} from '../utils/stopEvent';
+import {useEvent} from './utils/useEvent';
+import {useLatestRef} from './utils/useLatestRef';
 
 let isPreventScrollSupported = false;
 
@@ -162,6 +163,7 @@ export interface Props {
   virtual?: boolean;
   orientation?: 'vertical' | 'horizontal' | 'both';
   cols?: number;
+  scrollItemIntoView?: boolean | ScrollIntoViewOptions;
 }
 
 /**
@@ -170,7 +172,7 @@ export interface Props {
  * @see https://floating-ui.com/docs/useListNavigation
  */
 export const useListNavigation = <RT extends ReferenceType = ReferenceType>(
-  {open, onOpenChange, refs}: FloatingContext<RT>,
+  {open, onOpenChange, refs, elements: {domReference}}: FloatingContext<RT>,
   {
     listRef,
     activeIndex,
@@ -188,6 +190,7 @@ export const useListNavigation = <RT extends ReferenceType = ReferenceType>(
     disabledIndices = undefined,
     orientation = 'vertical',
     cols = 1,
+    scrollItemIntoView = true,
   }: Props = {
     listRef: {current: []},
     activeIndex: null,
@@ -233,25 +236,29 @@ export const useListNavigation = <RT extends ReferenceType = ReferenceType>(
   const focusItemOnOpenRef = React.useRef(focusItemOnOpen);
   const indexRef = React.useRef(selectedIndex ?? -1);
   const keyRef = React.useRef<null | string>(null);
-  const blockPointerLeaveRef = React.useRef(false);
+  const isPointerModalityRef = React.useRef(true);
   const previousOnNavigateRef = React.useRef(onNavigate);
   const previousOpenRef = React.useRef(open);
   const forceSyncFocus = React.useRef(false);
+  const forceScrollIntoViewRef = React.useRef(false);
 
   const disabledIndicesRef = useLatestRef(disabledIndices);
   const latestOpenRef = useLatestRef(open);
+  const scrollItemIntoViewRef = useLatestRef(scrollItemIntoView);
 
   const [activeId, setActiveId] = React.useState<string | undefined>();
 
   const focusItem = React.useCallback(
     (
       listRef: React.MutableRefObject<Array<HTMLElement | null>>,
-      indexRef: React.MutableRefObject<number>
+      indexRef: React.MutableRefObject<number>,
+      forceScrollIntoView = false
     ) => {
+      const item = listRef.current[indexRef.current];
+
       if (virtual) {
-        setActiveId(listRef.current[indexRef.current]?.id);
+        setActiveId(item?.id);
       } else {
-        const item = listRef.current[indexRef.current];
         enqueueFocus(item, {
           preventScroll: true,
           // Mac Safari does not move the virtual cursor unless the focus call
@@ -268,8 +275,26 @@ export const useListNavigation = <RT extends ReferenceType = ReferenceType>(
               : false,
         });
       }
+
+      requestAnimationFrame(() => {
+        const scrollIntoViewOptions = scrollItemIntoViewRef.current;
+        const shouldScrollIntoView =
+          scrollIntoViewOptions &&
+          item &&
+          (forceScrollIntoView || !isPointerModalityRef.current);
+
+        if (shouldScrollIntoView) {
+          // JSDOM doesn't support `.scrollIntoView()` but it's widely supported
+          // by all browsers.
+          item.scrollIntoView?.(
+            typeof scrollIntoViewOptions === 'boolean'
+              ? {block: 'nearest', inline: 'nearest'}
+              : scrollIntoViewOptions
+          );
+        }
+      });
     },
-    [virtual]
+    [virtual, scrollItemIntoViewRef]
   );
 
   useLayoutEffect(() => {
@@ -290,12 +315,15 @@ export const useListNavigation = <RT extends ReferenceType = ReferenceType>(
 
     if (open) {
       if (focusItemOnOpenRef.current && selectedIndex != null) {
+        // Regardless of the pointer modality, we want to ensure the selected
+        // item comes into view when the floating element is opened.
+        forceScrollIntoViewRef.current = true;
         onNavigate(selectedIndex);
       }
     } else if (previousOpenRef.current) {
       // Since the user can specify `onNavigate` conditionally
       // (onNavigate: open ? setActiveIndex : setSelectedIndex),
-      // we store and call the previous function
+      // we store and call the previous function.
       indexRef.current = -1;
       previousOnNavigateRef.current(null);
     }
@@ -322,7 +350,7 @@ export const useListNavigation = <RT extends ReferenceType = ReferenceType>(
           focusItem(listRef, indexRef);
         }
 
-        // Initial sync
+        // Initial sync.
         if (
           !previousOpenRef.current &&
           focusItemOnOpenRef.current &&
@@ -340,7 +368,8 @@ export const useListNavigation = <RT extends ReferenceType = ReferenceType>(
         }
       } else if (!isIndexOutOfBounds(listRef, activeIndex)) {
         indexRef.current = activeIndex;
-        focusItem(listRef, indexRef);
+        focusItem(listRef, indexRef, forceScrollIntoViewRef.current);
+        forceScrollIntoViewRef.current = false;
       }
     }
   }, [
@@ -367,7 +396,7 @@ export const useListNavigation = <RT extends ReferenceType = ReferenceType>(
     if (previousOpenRef.current && !open) {
       const parentFloating = tree?.nodesRef.current.find(
         (node) => node.id === parentId
-      )?.context?.refs.floating.current;
+      )?.context?.elements.floating;
 
       if (
         parentFloating &&
@@ -384,6 +413,52 @@ export const useListNavigation = <RT extends ReferenceType = ReferenceType>(
     previousOpenRef.current = open;
   });
 
+  const hasActiveIndex = activeIndex != null;
+
+  const item = React.useMemo(() => {
+    function syncCurrentTarget(currentTarget: HTMLElement | null) {
+      if (!open) return;
+      const index = listRef.current.indexOf(currentTarget);
+      if (index !== -1) {
+        onNavigate(index);
+      }
+    }
+
+    const props: ElementProps['item'] = {
+      onFocus({currentTarget}) {
+        syncCurrentTarget(currentTarget);
+      },
+      onClick: ({currentTarget}) => currentTarget.focus({preventScroll: true}), // Safari
+      ...(focusItemOnHover && {
+        onMouseMove({currentTarget}) {
+          syncCurrentTarget(currentTarget);
+        },
+        onPointerLeave() {
+          if (!isPointerModalityRef.current) {
+            return;
+          }
+
+          indexRef.current = -1;
+          focusItem(listRef, indexRef);
+
+          // Virtual cursor with VoiceOver on iOS needs this to be flushed
+          // synchronously or there is a glitch that prevents nested
+          // submenus from being accessible.
+          flushSync(() => onNavigate(null));
+
+          if (!virtual) {
+            // This also needs to be sync to prevent fast mouse movements
+            // from leaving behind a stale active item when landing on a
+            // disabled button item.
+            refs.floating.current?.focus({preventScroll: true});
+          }
+        },
+      }),
+    };
+
+    return props;
+  }, [open, refs, focusItem, focusItemOnHover, listRef, onNavigate, virtual]);
+
   return React.useMemo(() => {
     if (!enabled) {
       return {};
@@ -392,7 +467,7 @@ export const useListNavigation = <RT extends ReferenceType = ReferenceType>(
     const disabledIndices = disabledIndicesRef.current;
 
     function onKeyDown(event: React.KeyboardEvent) {
-      blockPointerLeaveRef.current = true;
+      isPointerModalityRef.current = false;
       forceSyncFocus.current = true;
 
       // If the floating element is animating out, ignore navigation. Otherwise,
@@ -409,8 +484,8 @@ export const useListNavigation = <RT extends ReferenceType = ReferenceType>(
         stopEvent(event);
         onOpenChange(false);
 
-        if (isHTMLElement(refs.domReference.current)) {
-          refs.domReference.current.focus();
+        if (isHTMLElement(domReference)) {
+          domReference.focus();
         }
 
         return;
@@ -430,7 +505,7 @@ export const useListNavigation = <RT extends ReferenceType = ReferenceType>(
         onNavigate(indexRef.current);
       }
 
-      // Grid navigation
+      // Grid navigation.
       if (cols > 1) {
         const prevIndex = indexRef.current;
 
@@ -495,7 +570,7 @@ export const useListNavigation = <RT extends ReferenceType = ReferenceType>(
           onNavigate(indexRef.current);
         }
 
-        // Remains on the same row/column
+        // Remains on the same row/column.
         if (orientation === 'both') {
           const prevRow = Math.floor(prevIndex / cols);
 
@@ -667,15 +742,17 @@ export const useListNavigation = <RT extends ReferenceType = ReferenceType>(
       }
     }
 
+    const ariaActiveDescendantProp = virtual &&
+      open &&
+      hasActiveIndex && {
+        'aria-activedescendant': activeId,
+      };
+
     return {
       reference: {
-        ...(virtual &&
-          open &&
-          activeIndex != null && {
-            'aria-activedescendant': activeId,
-          }),
+        ...ariaActiveDescendantProp,
         onKeyDown(event) {
-          blockPointerLeaveRef.current = true;
+          isPointerModalityRef.current = false;
           const isArrowKey = event.key.indexOf('Arrow') === 0;
 
           if (virtual && open) {
@@ -742,56 +819,17 @@ export const useListNavigation = <RT extends ReferenceType = ReferenceType>(
       },
       floating: {
         'aria-orientation': orientation === 'both' ? undefined : orientation,
-        ...(virtual &&
-          activeIndex != null && {
-            'aria-activedescendant': activeId,
-          }),
+        ...ariaActiveDescendantProp,
         onKeyDown,
         onPointerMove() {
-          blockPointerLeaveRef.current = false;
+          isPointerModalityRef.current = true;
         },
       },
-      item: {
-        onFocus({currentTarget}) {
-          const index = listRef.current.indexOf(currentTarget);
-          if (index !== -1 && activeIndex !== index) {
-            onNavigate(index);
-          }
-        },
-        onClick: ({currentTarget}) =>
-          currentTarget.focus({preventScroll: true}), // Safari
-        ...(focusItemOnHover && {
-          onMouseMove({currentTarget}) {
-            const target = currentTarget as HTMLButtonElement | null;
-            if (target) {
-              const index = listRef.current.indexOf(target);
-              if (index !== -1 && activeIndex !== index) {
-                onNavigate(index);
-              }
-            }
-          },
-          onPointerLeave() {
-            if (!blockPointerLeaveRef.current) {
-              indexRef.current = -1;
-              focusItem(listRef, indexRef);
-
-              // Virtual cursor with VoiceOver on iOS needs this to be flushed
-              // synchronously or there is a glitch that prevents nested
-              // submenus from being accessible.
-              flushSync(() => onNavigate(null));
-
-              if (!virtual) {
-                // This also needs to be sync to prevent fast mouse movements
-                // from leaving behind a stale active item when landing on a
-                // disabled button item.
-                refs.floating.current?.focus({preventScroll: true});
-              }
-            }
-          },
-        }),
-      },
+      item,
     };
   }, [
+    domReference,
+    refs,
     activeId,
     disabledIndicesRef,
     latestOpenRef,
@@ -801,18 +839,16 @@ export const useListNavigation = <RT extends ReferenceType = ReferenceType>(
     rtl,
     virtual,
     open,
-    activeIndex,
+    hasActiveIndex,
     nested,
     selectedIndex,
     openOnArrowKeyDown,
-    focusItemOnHover,
     allowEscape,
     cols,
     loop,
-    refs,
     focusItemOnOpen,
-    focusItem,
     onNavigate,
     onOpenChange,
+    item,
   ]);
 };

@@ -25,11 +25,6 @@ export const SPONSORS = [
 
 export const MINI_SPONSORS = [
   {
-    logo: '/sponsors/mobilemall.svg',
-    label: 'Mobile Mall - Mobile Phone Prices in Pakistan',
-    url: 'https://mobilemall.pk/',
-  },
-  {
     logo: '/sponsors/coupontoaster.svg',
     label: 'Coupontoaster - Discount and Coupon Codes',
     url: 'https://coupontoaster.com/',
@@ -46,11 +41,6 @@ export const MINI_SPONSORS = [
     url: 'https://techbuy.in/wazirx-referral-code/',
   },
   {
-    logo: '/sponsors/dpcoupon.svg',
-    label: 'dpcoupon - coupon codes and discounts',
-    url: 'https://www.dpcoupon.com/',
-  },
-  {
     logo: '/sponsors/ggc.svg',
     label:
       'ggc - espionner un téléphone Android iPhone Pour Control Parental',
@@ -60,11 +50,6 @@ export const MINI_SPONSORS = [
     logo: '/sponsors/livingfeeds.svg',
     label: 'Living Feeds',
     url: 'https://livingfeeds.com/',
-  },
-  {
-    logo: '/sponsors/bestforandroid.svg',
-    label: 'Best Android Apps, Downloads & How to Guides',
-    url: 'https://bestforandroid.com/',
   },
   {
     logo: '/sponsors/titanam.svg',
@@ -82,13 +67,13 @@ export const MINI_SPONSORS = [
     url: 'https://ariakit.org/',
   },
   {
-    logo: '/sponsors/ibomma.svg',
-    label: 'Ibomma App',
-    url: 'https://theibomma.com/',
-  },
-  {
     logo: '/sponsors/pacmanblog.svg',
     label: 'Pacman 30th Anniversary Doodle',
     url: 'https://pacmanblog.com/',
+  },
+  {
+    logo: '/sponsors/pyjobs.svg',
+    label: 'PyJobs - Jobs for Python Developers',
+    url: 'https://www.pyjobs.com/',
   },
 ];

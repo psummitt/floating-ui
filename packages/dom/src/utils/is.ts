@@ -25,7 +25,7 @@ export function isNode(value: any): value is Node {
 }
 
 export function isShadowRoot(node: Node): node is ShadowRoot {
-  // Browsers without `ShadowRoot` support
+  // Browsers without `ShadowRoot` support.
   if (typeof ShadowRoot === 'undefined') {
     return false;
   }
@@ -35,10 +35,9 @@ export function isShadowRoot(node: Node): node is ShadowRoot {
 }
 
 export function isOverflowElement(element: Element): boolean {
-  // Firefox wants us to check `-x` and `-y` variations as well
   const {overflow, overflowX, overflowY, display} = getComputedStyle(element);
   return (
-    /auto|scroll|overlay|hidden/.test(overflow + overflowY + overflowX) &&
+    /auto|scroll|overlay|hidden|clip/.test(overflow + overflowY + overflowX) &&
     !['inline', 'contents'].includes(display)
   );
 }
@@ -48,11 +47,11 @@ export function isTableElement(element: Element): boolean {
 }
 
 export function isContainingBlock(element: Element): boolean {
-  // TODO: Try and use feature detection here instead
+  // TODO: Try to use feature detection here instead.
   const isFirefox = /firefox/i.test(getUAString());
   const css = getComputedStyle(element);
   const backdropFilter =
-    (css as any).backdropFilter || (css as any).WebkitBackdropFilter;
+    css.backdropFilter || (css as any).WebkitBackdropFilter;
 
   // This is non-exhaustive but covers the most common CSS properties that
   // create a containing block.
@@ -66,24 +65,23 @@ export function isContainingBlock(element: Element): boolean {
     ['transform', 'perspective'].some((value) =>
       css.willChange.includes(value)
     ) ||
-    ['paint', 'layout', 'strict', 'content'].some(
-      // TS 4.1 compat
-      (value) => {
-        const contain = (css as any).contain as string | undefined;
-        return contain != null ? contain.includes(value) : false;
-      }
-    )
+    ['paint', 'layout', 'strict', 'content'].some((value) => {
+      // Add type check for old browsers.
+      const contain = css.contain as string | undefined;
+      return contain != null ? contain.includes(value) : false;
+    })
   );
 }
 
 export function isLayoutViewport(): boolean {
-  // Not Safari
-  return !/^((?!chrome|android).)*safari/i.test(getUAString());
-  // Feature detection for this fails in various ways
+  // TODO: Try to use feature detection here instead. Feature detection for
+  // this can fail in various ways, making the userAgent check the most:
+  // reliable:
   // • Always-visible scrollbar or not
-  // • Width of <html>, etc.
-  // const vV = win.visualViewport;
-  // return vV ? Math.abs(win.innerWidth / vV.scale - vV.width) < 0.5 : true;
+  // • Width of <html>
+
+  // Not Safari.
+  return !/^((?!chrome|android).)*safari/i.test(getUAString());
 }
 
 export function isLastTraversableNode(node: Node) {

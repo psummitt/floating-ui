@@ -1,5 +1,5 @@
-import {Dimensions} from 'react-native';
 import {Platform} from '@floating-ui/core';
+import {Dimensions} from 'react-native';
 
 const ORIGIN = {x: 0, y: 0};
 
@@ -39,8 +39,8 @@ export const createPlatform = ({
         );
       };
 
-      if (offsetParent.current) {
-        offsetParent.current.measure(onMeasure);
+      if (offsetParent) {
+        offsetParent.measure(onMeasure);
       } else {
         onMeasure();
       }
@@ -60,8 +60,8 @@ export const createPlatform = ({
         resolve({...rect, x: rect.x + offsetX, y: rect.y + offsetY});
       };
 
-      if (offsetParent.current) {
-        offsetParent.current.measure(onMeasure);
+      if (offsetParent) {
+        offsetParent.measure(onMeasure);
       } else {
         onMeasure();
       }

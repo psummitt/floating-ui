@@ -1,16 +1,17 @@
-import * as React from 'react';
 import {detectOverflow, offset} from '@floating-ui/react-dom';
-import type {
-  SideObject,
-  DetectOverflowOptions,
-  Middleware,
-  FloatingContext,
-  ElementProps,
-  MiddlewareArguments,
-} from './types';
+import * as React from 'react';
 import {flushSync} from 'react-dom';
-import {getUserAgent} from './utils/getPlatform';
+
 import {useEvent} from './hooks/utils/useEvent';
+import type {
+  DetectOverflowOptions,
+  ElementProps,
+  FloatingContext,
+  Middleware,
+  MiddlewareArguments,
+  SideObject,
+} from './types';
+import {getUserAgent} from './utils/getPlatform';
 
 function getArgsWithCustomFloatingHeight(
   args: MiddlewareArguments,
@@ -28,20 +29,27 @@ function getArgsWithCustomFloatingHeight(
   };
 }
 
+export interface InnerProps {
+  listRef: React.MutableRefObject<Array<HTMLElement | null>>;
+  index: number;
+  onFallbackChange?: null | ((fallback: boolean) => void);
+  offset?: number;
+  overflowRef?: React.MutableRefObject<SideObject | null>;
+  scrollRef?: React.MutableRefObject<HTMLElement | null>;
+  minItemsVisible?: number;
+  referenceOverflowThreshold?: number;
+}
+
+/**
+ * Positions the floating element such that an inner element inside
+ * of it is anchored to the reference element.
+ * @see https://floating-ui.com/docs/inner
+ */
 export const inner = (
-  options: {
-    listRef: React.MutableRefObject<Array<HTMLElement | null>>;
-    index: number;
-    onFallbackChange?: null | ((fallback: boolean) => void);
-    offset?: number;
-    overflowRef?: React.MutableRefObject<SideObject | null>;
-    scrollRef?: React.MutableRefObject<HTMLElement | null>;
-    minItemsVisible?: number;
-    referenceOverflowThreshold?: number;
-  } & Partial<DetectOverflowOptions>
+  props: InnerProps & Partial<DetectOverflowOptions>
 ): Middleware => ({
   name: 'inner',
-  options,
+  options: props,
   async fn(middlewareArguments) {
     const {
       listRef,
@@ -53,7 +61,7 @@ export const inner = (
       referenceOverflowThreshold = 0,
       scrollRef,
       ...detectOverflowOptions
-    } = options;
+    } = props;
 
     const {
       rects,
@@ -87,7 +95,7 @@ export const inner = (
       ).fn(middlewareArguments)),
     };
 
-    const el = scrollRef?.current ?? floating;
+    const el = scrollRef?.current || floating;
 
     const overflow = await detectOverflow(
       getArgsWithCustomFloatingHeight(nextArgs, el.scrollHeight),
@@ -141,19 +149,26 @@ export const inner = (
   },
 });
 
+export interface UseInnerOffsetProps {
+  enabled?: boolean;
+  overflowRef: React.MutableRefObject<SideObject | null>;
+  scrollRef?: React.MutableRefObject<HTMLElement | null>;
+  onChange: (offset: number | ((offset: number) => number)) => void;
+}
+
+/**
+ * Changes the `inner` middleware's `offset` upon a `wheel` event to
+ * expand the floating element's height, revealing more list items.
+ * @see https://floating-ui.com/docs/inner
+ */
 export const useInnerOffset = (
-  {open, refs}: FloatingContext,
+  {open, elements}: FloatingContext,
   {
     enabled = true,
     overflowRef,
     scrollRef,
     onChange: unstable_onChange,
-  }: {
-    enabled?: boolean;
-    overflowRef: React.MutableRefObject<SideObject | null>;
-    scrollRef?: React.MutableRefObject<HTMLElement | null>;
-    onChange: (offset: number | ((offset: number) => number)) => void;
-  }
+  }: UseInnerOffsetProps
 ): ElementProps => {
   const onChange = useEvent(unstable_onChange);
   const controlledScrollingRef = React.useRef(false);
@@ -193,7 +208,7 @@ export const useInnerOffset = (
       }
     }
 
-    const el = scrollRef?.current ?? refs.floating.current;
+    const el = scrollRef?.current || elements.floating;
 
     if (open && el) {
       el.addEventListener('wheel', onWheel);
@@ -213,7 +228,7 @@ export const useInnerOffset = (
         el.removeEventListener('wheel', onWheel);
       };
     }
-  }, [enabled, open, refs, overflowRef, scrollRef, onChange]);
+  }, [enabled, open, elements.floating, overflowRef, scrollRef, onChange]);
 
   return React.useMemo(() => {
     if (!enabled) {
@@ -232,7 +247,7 @@ export const useInnerOffset = (
           controlledScrollingRef.current = false;
         },
         onScroll() {
-          const el = scrollRef?.current || refs.floating.current;
+          const el = scrollRef?.current || elements.floating;
 
           if (!overflowRef.current || !el || !controlledScrollingRef.current) {
             return;
@@ -256,5 +271,5 @@ export const useInnerOffset = (
         },
       },
     };
-  }, [enabled, overflowRef, refs, scrollRef, onChange]);
+  }, [enabled, overflowRef, elements.floating, scrollRef, onChange]);
 };

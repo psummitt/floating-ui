@@ -1,7 +1,8 @@
-import type {ElementProps, FloatingContext, ReferenceType} from '../types';
 import * as React from 'react';
+
+import type {ElementProps, FloatingContext, ReferenceType} from '../types';
+import {isHTMLElement, isMouseLikePointerType} from '../utils/is';
 import {isTypeableElement} from '../utils/isTypeableElement';
-import {isHTMLElement} from '../utils/is';
 
 function isButtonTarget(event: React.KeyboardEvent<Element>) {
   return isHTMLElement(event.target) && event.target.tagName === 'BUTTON';
@@ -24,7 +25,7 @@ export interface Props {
  * @see https://floating-ui.com/docs/useClick
  */
 export const useClick = <RT extends ReferenceType = ReferenceType>(
-  {open, onOpenChange, dataRef, refs}: FloatingContext<RT>,
+  {open, onOpenChange, dataRef, elements: {domReference}}: FloatingContext<RT>,
   {
     enabled = true,
     event: eventOption = 'click',
@@ -52,7 +53,10 @@ export const useClick = <RT extends ReferenceType = ReferenceType>(
             return;
           }
 
-          if (pointerTypeRef.current === 'mouse' && ignoreMouse) {
+          if (
+            isMouseLikePointerType(pointerTypeRef.current, true) &&
+            ignoreMouse
+          ) {
             return;
           }
 
@@ -78,12 +82,19 @@ export const useClick = <RT extends ReferenceType = ReferenceType>(
           dataRef.current.openEvent = event.nativeEvent;
         },
         onClick(event) {
+          if (dataRef.current.__syncReturnFocus) {
+            return;
+          }
+
           if (eventOption === 'mousedown' && pointerTypeRef.current) {
             pointerTypeRef.current = undefined;
             return;
           }
 
-          if (pointerTypeRef.current === 'mouse' && ignoreMouse) {
+          if (
+            isMouseLikePointerType(pointerTypeRef.current, true) &&
+            ignoreMouse
+          ) {
             return;
           }
 
@@ -113,7 +124,7 @@ export const useClick = <RT extends ReferenceType = ReferenceType>(
             return;
           }
 
-          if (event.key === ' ' && !isSpaceIgnored(refs.domReference.current)) {
+          if (event.key === ' ' && !isSpaceIgnored(domReference)) {
             // Prevent scrolling
             event.preventDefault();
           }
@@ -133,10 +144,7 @@ export const useClick = <RT extends ReferenceType = ReferenceType>(
             return;
           }
 
-          if (
-            isButtonTarget(event) ||
-            isSpaceIgnored(refs.domReference.current)
-          ) {
+          if (isButtonTarget(event) || isSpaceIgnored(domReference)) {
             return;
           }
 
@@ -158,7 +166,7 @@ export const useClick = <RT extends ReferenceType = ReferenceType>(
     eventOption,
     ignoreMouse,
     keyboardHandlers,
-    refs,
+    domReference,
     toggle,
     open,
     onOpenChange,

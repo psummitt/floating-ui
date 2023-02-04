@@ -32,8 +32,13 @@ module.exports = {
               fontSize: '2rem',
             },
             pre: {
-              fontSize: '1.05rem',
               lineHeight: '2.1',
+              fontSize: '0.9375rem',
+              padding: '1rem 1.5rem',
+            },
+            code: {
+              fontSize: '0.9375rem',
+              whiteSpace: 'pre',
             },
             img: {
               margin: '0',
@@ -42,12 +47,20 @@ module.exports = {
         },
         md: {
           css: {
-            fontSize: '1.125rem',
+            fontSize: '1.075rem',
             h1: {
               fontSize: '3rem',
             },
+            'h2 > a': {
+              fontSize: '2rem',
+            },
             pre: {
               lineHeight: '2.1',
+              fontSize: '0.875rem',
+            },
+            code: {
+              fontSize: '0.875em',
+              whiteSpace: 'pre',
             },
             img: {
               margin: '0',
@@ -65,6 +78,13 @@ module.exports = {
             '--tw-prose-invert-bullets': theme(
               'colors.gray[150]'
             ),
+            'a code': {
+              color: 'inherit !important',
+            },
+            'a:has(code)': {
+              textDecorationThickness: '1px',
+              textUnderlineOffset: '3px',
+            },
             img: {
               margin: '0',
             },
@@ -73,33 +93,85 @@ module.exports = {
             },
             fontSize: '1rem',
             maxWidth: '70ch',
+            '[data-rehype-pretty-code-fragment]': {
+              position: 'relative',
+            },
             pre: {
-              color: '#cddbf7',
               padding: '1rem 1.5rem',
               lineHeight: '2',
-              backgroundColor: '#282834',
               '> code': {
                 display: 'grid',
+                fontSize: 'inherit',
+                boxShadow: 'none',
               },
               '.line': {
-                borderLeft: '2px solid transparent',
                 margin: '0 -1.5rem',
                 padding: '0 1.5rem',
               },
-              '.line.line--highlighted': {
+              '.word': {
+                padding: '0.2rem 0',
+                borderRadius: '0.25rem',
+                zIndex: '0',
+              },
+              '&::before': {
+                position: 'absolute',
+                fontSize: '80%',
+                right: '0.6rem',
+                top: '0.2rem',
+                content: 'attr(data-language)',
+                textTansform: 'uppercase',
+              },
+              '&[data-theme="light"]::before': {
+                color: GRAY[1000],
+              },
+              '&[data-theme="dark"]::before': {
+                color: GRAY[50],
+              },
+              'code[data-theme="light"] .line--highlighted': {
                 borderLeftColor: colors.rose[400],
-                backgroundColor: '#3b3547',
+                backgroundColor: colors.orange[50],
+              },
+              'code[data-theme="dark"] .line--highlighted': {
+                borderLeftColor: colors.rose[400],
+                backgroundColor: `rgb(221 214 254 / 0.1)`,
+              },
+              'code[data-theme="light"] .word': {
+                backgroundColor: colors.orange[100],
+                boxShadow: `0 0 0 1px ${colors.orange[100]}`,
+              },
+              'code[data-theme="dark"] .word': {
+                backgroundColor: 'rgba(200,200,255,0.2)',
+                boxShadow: '0 0 0 1px rgb(200 200 255 / 20%)',
+              },
+              'code[data-theme="dark"] [data-word-id="a"]': {
+                backgroundColor: theme.colors.rose[800],
+                color: theme.colors.rose[200],
+                boxShadow: `0 0 0 1px ${theme.colors.rose[800]}`,
+              },
+              'code[data-theme="dark"] [data-word-id="b"]': {
+                backgroundColor: theme.colors.cyan[800],
+                color: theme.colors.cyan[200],
+                boxShadow: `0 0 0 1px ${theme.colors.cyan[800]}`,
+              },
+              'code[data-theme="light"] [data-word-id="a"]': {
+                backgroundColor: theme.colors.rose[100],
+                color: theme.colors.rose[900],
+                boxShadow: `0 0 0 1px ${theme.colors.rose[100]}`,
+              },
+              'code[data-theme="light"] [data-word-id="b"]': {
+                backgroundColor: theme.colors.cyan[100],
+                color: theme.colors.cyan[900],
+                boxShadow: `0 0 0 1px ${theme.colors.cyan[100]}`,
               },
               span: {
                 position: 'relative',
                 zIndex: '1',
               },
-              '.word': {
-                backgroundColor: 'rgba(200,200,255,0.2)',
-                padding: '0.2rem 0',
-                borderRadius: '0.25rem',
-                boxShadow: '0 0 0 1px rgb(200 200 255 / 20%)',
-                zIndex: '0',
+              code: {
+                fontSize: 'inherit',
+                background: 'inherit',
+                whiteSpace: 'pre',
+                border: 'none',
               },
             },
             h1: {
@@ -113,37 +185,21 @@ module.exports = {
             h2: {
               wordBreak: 'break-word',
               '> a': {
-                textDecoration: 'underline',
-                textDecorationColor: 'transparent',
-                textUnderlineOffset: '8px',
-                textDecorationThickness: '2px',
-                transition:
-                  'color 0.2s ease, text-decoration 0.2s ease',
+                textDecoration: 'none',
               },
             },
             h3: {
               wordBreak: 'break-word',
               '> a': {
-                textDecoration: 'underline',
-                textDecorationColor: 'transparent',
-                textUnderlineOffset: '8px',
-                textDecorationThickness: '2px',
-                transition:
-                  'color 0.2s ease, text-decoration 0.2s ease',
+                textDecoration: 'none',
               },
             },
             h4: {
               '> a': {
-                textDecoration: 'underline',
-                textDecorationColor: 'transparent',
-                textUnderlineOffset: '8px',
-                textDecorationThickness: '2px',
-                transition:
-                  'color 0.2s ease, text-decoration 0.2s ease',
+                textDecoration: 'none',
               },
             },
             code: {
-              color: '#c7d2f5',
               fontWeight: '500',
               '&::before': {
                 display: 'none',
@@ -154,8 +210,7 @@ module.exports = {
             },
             ':not(pre) > code': {
               borderRadius: '0.25rem',
-              padding: '0.375rem 0.5rem',
-              backgroundColor: '#30303e',
+              padding: '0.3rem 0.4rem',
             },
             'blockquote p:first-of-type::before': {
               display: 'none',
@@ -171,16 +226,6 @@ module.exports = {
       },
       zIndex: {
         '-1': '-1',
-      },
-      backgroundImage: {
-        'gradient-radial':
-          'radial-gradient(circle at 50% 10%, var(--tw-gradient-stops))',
-      },
-      inset: {
-        '-32': '-128px',
-      },
-      height: {
-        128: '32rem',
       },
     },
   },

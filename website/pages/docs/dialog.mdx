@@ -29,7 +29,7 @@ differences:
 An accessible dialog component has the following:
 
 - **Dismissal**: When the user presses the `esc` key or outside
-  the dialog while the it is open, it closes.
+  the dialog while it is open, it closes.
 - **Role**: The elements are given relevant role and ARIA
   attributes to be accessible to screen readers.
 - **Focus management**: Focus is fully trapped inside the dialog
@@ -58,11 +58,11 @@ Let's walk through the example:
 import {useState} from 'react';
 
 function Dialog() {
-  const [open, setOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 }
 ```
 
-The `open{:.const}` state determines whether or not the dialog is
+`isOpen{:.const}` determines whether or not the dialog is
 currently open on the screen. It is used for conditional
 rendering.
 
@@ -71,20 +71,21 @@ rendering.
 The `useFloating(){:js}` hook provides context for our dialog. We
 need to pass it some information:
 
-- `open`: The open state from our `useState(){:js}` hook above.
+- `open{:.objectKey}`: The open state from our `useState(){:js}`
+  hook above.
 - `onOpenChange{:.objectKey}`: A callback function that will be
   called when the dialog is opened or closed. We'll use this to
-  update our `open{:.const}` state.
+  update our `isOpen{:.const}` state.
 
 ```js /useFloating/
 import {useFloating} from '@floating-ui/react';
 
 function Dialog() {
-  const [open, setOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
-  const {reference, floating, context} = useFloating({
-    open,
-    onOpenChange: setOpen,
+  const {refs, context} = useFloating({
+    open: isOpen,
+    onOpenChange: setIsOpen,
   });
 }
 ```
@@ -109,11 +110,11 @@ import {
 } from '@floating-ui/react';
 
 function Dialog() {
-  const [open, setOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
-  const {reference, floating, context} = useFloating({
-    open,
-    onOpenChange: setOpen,
+  const {refs, context} = useFloating({
+    open: isOpen,
+    onOpenChange: setIsOpen,
   });
 
   const click = useClick(context);
@@ -165,24 +166,24 @@ function Dialog() {
   // ...
   return (
     <>
-      <button ref={reference} {...getReferenceProps()}>
+      <button ref={refs.setReference} {...getReferenceProps()}>
         Reference element
       </button>
-      {open && (
+      {isOpen && (
         <FloatingOverlay
           lockScroll
           style={{background: 'rgba(0, 0, 0, 0.8)'}}
         >
           <FloatingFocusManager context={context}>
             <div
-              ref={floating}
+              ref={refs.setFloating}
               aria-labelledby={labelId}
               aria-describedby={descriptionId}
               {...getFloatingProps()}
             >
               <h2 id={labelId}>Heading element</h2>
               <p id={descriptionId}>Description element</p>
-              <button onClick={() => setOpen(false)}>
+              <button onClick={() => setIsOpen(false)}>
                 Close
               </button>
             </div>
@@ -202,12 +203,12 @@ function Dialog() {
 - `<FloatingOverlay />{:js}` is a component that renders a
   backdrop overlay element behind the floating element, with the
   ability to lock the body scroll.
-  [FloatingOverlay docs](/docs/FloatingOverlay).
+  [`FloatingOverlay` docs](/docs/FloatingOverlay).
 - `<FloatingFocusManager />{:js}` is a component that manages
   focus of the dialog for modal behavior, trapping focus inside.
   It should directly wrap the floating element and only be
   rendered when the dialog is also rendered.
-  [FloatingFocusManager docs](/docs/FloatingFocusManager).
+  [`FloatingFocusManager` docs](/docs/FloatingFocusManager).
 
 ## Reusable dialog component
 

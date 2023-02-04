@@ -1,6 +1,7 @@
 import type {
   AutoPlacementOptions,
   ClientRectObject,
+  ComputePositionConfig as CoreComputePositionConfig,
   DetectOverflowOptions as CoreDetectOverflowOptions,
   Dimensions,
   ElementRects,
@@ -16,7 +17,6 @@ import type {
   SideObject,
   SizeOptions as CoreSizeOptions,
   Strategy,
-  ComputePositionConfig as CoreComputePositionConfig,
 } from '@floating-ui/core';
 
 type Promisable<T> = T | Promise<T>;
@@ -42,7 +42,10 @@ export interface Platform {
     offsetParent: Element;
     strategy: Strategy;
   }) => Promisable<Rect>;
-  getOffsetParent?: (element: Element) => Promisable<Element | Window>;
+  getOffsetParent?: (
+    element: Element,
+    polyfill?: (element: HTMLElement) => Element | null
+  ) => Promisable<Element | Window>;
   isElement?: (value: unknown) => Promisable<boolean>;
   getDocumentElement?: (element: Element) => Promisable<HTMLElement>;
   getClientRects?: (element: Element) => Promisable<Array<ClientRectObject>>;
@@ -153,7 +156,7 @@ declare const size: (
  * @see https://floating-ui.com/docs/arrow
  */
 declare const arrow: (options: {
-  element: HTMLElement;
+  element: Element;
   padding?: Padding;
 }) => Middleware;
 
@@ -179,32 +182,30 @@ declare const detectOverflow: (
   options?: Partial<DetectOverflowOptions>
 ) => Promise<SideObject>;
 
-export {autoPlacement, shift, arrow, size, flip, hide, detectOverflow};
-export {offset, limitShift, inline} from '@floating-ui/core';
-export type {
-  Placement,
-  Strategy,
-  Alignment,
-  Side,
-  AlignedPlacement,
-  Axis,
-  Length,
-  Coords,
-  SideObject,
-  Dimensions,
-  Rect,
-  ElementRects,
-  ElementContext,
-  ClientRectObject,
-  Padding,
-  RootBoundary,
-  MiddlewareReturn,
-  MiddlewareData,
-  ComputePositionReturn,
-} from '@floating-ui/core';
-
+export {arrow, autoPlacement, detectOverflow, flip, hide, shift, size};
 export {computePosition} from './';
 export {autoUpdate, Options as AutoUpdateOptions} from './autoUpdate';
-
-export {getOverflowAncestors} from './utils/getOverflowAncestors';
 export {platform} from './platform';
+export {getOverflowAncestors} from './utils/getOverflowAncestors';
+export type {
+  AlignedPlacement,
+  Alignment,
+  Axis,
+  ClientRectObject,
+  ComputePositionReturn,
+  Coords,
+  Dimensions,
+  ElementContext,
+  ElementRects,
+  Length,
+  MiddlewareData,
+  MiddlewareReturn,
+  Padding,
+  Placement,
+  Rect,
+  RootBoundary,
+  Side,
+  SideObject,
+  Strategy,
+} from '@floating-ui/core';
+export {inline, limitShift, offset} from '@floating-ui/core';

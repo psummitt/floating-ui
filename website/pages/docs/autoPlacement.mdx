@@ -1,17 +1,14 @@
 # autoPlacement
 
-`autoPlacement(){:js}` chooses the placement that has the most
-space available automatically.
-
-You'll want to use this instead of `flip(){:js}` if you don't
-want to give the floating element a "preferred" placement and let
-it choose a placement for you.
+A visibility optimizer that chooses the placement that has the
+most space available automatically, without needing to specify a
+preferred placement.
 
 <div className="flex flex-col gap-4">
   <Chrome
     label="Scroll the container"
     center
-    scrollable
+    scrollable="y"
     className="h-96"
   >
     <Floating
@@ -27,10 +24,6 @@ it choose a placement for you.
   </Chrome>
 </div>
 
-In the above example, the automatic "most space" strategy is
-demonstrated (in contrast to flip's preferred + fallback "no
-space" one).
-
 ## Usage
 
 ```js
@@ -43,7 +36,7 @@ computePosition(referenceEl, floatingEl, {
 
 <Notice type="warning" title="Note">
   This is an alternative to `flip(){:js}`, so only one of either can be used.
-  See [Conflict with flip](/docs/autoPlacement#conflict-with-flip).
+  See [how they differ here](/docs/autoPlacement#conflict-with-flip).
 </Notice>
 
 ## Options
@@ -60,7 +53,7 @@ interface Options extends DetectOverflowOptions {
 
 ### alignment
 
-default: `null{:js}`
+default: `undefined{:js}`
 
 Without options, `autoPlacement(){:js}` will choose any of the
 `Side{:.class}` placements which fit best, i.e. `'top'{:js}`,
@@ -94,7 +87,7 @@ autoPlacement({
 
 ### allowedPlacements
 
-default: computed subset of `ALL_PLACEMENTS{:.const}`
+default: computed subset of `allPlacements{:.const}`
 
 Describes the placements which are allowed to be chosen.
 
@@ -105,13 +98,22 @@ autoPlacement({
 });
 ```
 
+```js
+autoPlacement({
+  // Only choose these placements
+  allowedPlacements: ['top-start', 'bottom-end'],
+});
+```
+
 ### ...detectOverflowOptions
 
-All of [detectOverflow](/docs/detectOverflow#options)'s options
+All of [`detectOverflow`](/docs/detectOverflow#options)'s options
 can be passed. For instance:
 
 ```js
-autoPlacement({padding: 5}); // 0 by default
+autoPlacement({
+  padding: 5, // 0 by default
+});
 ```
 
 ## Final placement
@@ -135,10 +137,10 @@ of them to use.
 
 The reason is they both try to perform work on the placement but
 with opposing strategies. Therefore, they will continually try to
-change the result or work of other one, leading to a reset loop.
+change the result or work of the other one, leading to a reset
+loop.
 
 - `flip(){:js}` — Uses a fallback "no space" strategy. Ensures
-  the user's preferred placement is kept unless there is no space
-  left.
+  the preferred placement is kept unless there is no space left.
 - `autoPlacement(){:js}` — Uses a primary "most space" strategy.
   Always chooses the placement with the most space available.

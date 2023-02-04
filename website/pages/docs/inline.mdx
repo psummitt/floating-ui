@@ -1,6 +1,6 @@
 # inline
 
-`inline(){:js}` provides improved positioning for inline
+A placement modifier that improves positioning for inline
 reference elements that span over multiple lines, such as
 hyperlinks or range selections.
 
@@ -18,7 +18,7 @@ Without `inline(){:js}`:
   height={256}
   alt="inline disabled"
   src="/inline-disabled.png"
-  className="border border-gray-800 dark:border-none rounded-lg"
+  className="rounded-lg shadow"
   draggable={false}
 />
 
@@ -29,7 +29,7 @@ With `inline(){:js}`:
   height={256}
   alt="inline enabled"
   src="/inline-enabled.png"
-  className="border border-gray-800 dark:border-none rounded-lg"
+  className="rounded-lg shadow"
   draggable={false}
 />
 
@@ -57,7 +57,12 @@ is only applied when the reference element's rects are disjoined.
 ```js
 function onMouseEnter({clientX, clientY}) {
   computePosition(referenceEl, floatingEl, {
-    middleware: [inline({x: clientX, y: clientY})],
+    middleware: [
+      inline({
+        x: clientX,
+        y: clientY,
+      }),
+    ],
   }).then(({x, y}) => {
     // ...
   });

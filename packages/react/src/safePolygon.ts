@@ -1,5 +1,7 @@
-import type {Side} from '@floating-ui/core';
-import type {FloatingContext, FloatingTreeType, ReferenceType} from './types';
+import type {Rect, Side} from '@floating-ui/core';
+
+import type {HandleCloseFn} from './hooks/useHover';
+import type {ReferenceType} from './types';
 import {contains} from './utils/contains';
 import {getChildren} from './utils/getChildren';
 import {getTarget} from './utils/getTarget';
@@ -24,59 +26,87 @@ function isPointInPolygon(point: Point, polygon: Polygon) {
   return isInside;
 }
 
+function isInside(point: Point, rect: Rect) {
+  return (
+    point[0] >= rect.x &&
+    point[0] <= rect.x + rect.width &&
+    point[1] >= rect.y &&
+    point[1] <= rect.y + rect.height
+  );
+}
+
 export function safePolygon<RT extends ReferenceType = ReferenceType>({
   restMs = 0,
   buffer = 0.5,
-  blockPointerEvents = true,
-  debug = null,
+  blockPointerEvents = false,
 }: Partial<{
   restMs: number;
   buffer: number;
   blockPointerEvents: boolean;
-  debug: null | ((points?: string | null) => void);
 }> = {}) {
   let timeoutId: NodeJS.Timeout;
-  let polygonIsDestroyed = false;
+  let isInsideRect = false;
+  let hasLanded = false;
 
-  const fn = ({
+  const fn: HandleCloseFn<RT> = ({
     x,
     y,
     placement,
-    refs,
+    elements,
     onClose,
     nodeId,
     tree,
-    leave = false,
-  }: FloatingContext<RT> & {
-    onClose: () => void;
-    tree?: FloatingTreeType<RT> | null;
-    leave?: boolean;
   }) => {
     return function onMouseMove(event: MouseEvent) {
-      clearTimeout(timeoutId);
-
       function close() {
         clearTimeout(timeoutId);
         onClose();
       }
 
-      const {clientX, clientY} = event;
-      const target = getTarget(event) as Element | null;
+      clearTimeout(timeoutId);
 
-      // If the pointer is over the reference, there is no need to run the logic
       if (
-        event.type === 'mousemove' &&
-        contains(refs.domReference.current, target)
+        !elements.domReference ||
+        !elements.floating ||
+        placement == null ||
+        x == null ||
+        y == null
       ) {
+        return;
+      }
+
+      const {clientX, clientY} = event;
+      const clientPoint: Point = [clientX, clientY];
+      const target = getTarget(event) as Element | null;
+      const isLeave = event.type === 'mouseleave';
+      const isOverFloatingEl = contains(elements.floating, target);
+      const isOverReferenceEl = contains(elements.domReference, target);
+      const refRect = elements.domReference.getBoundingClientRect();
+      const rect = elements.floating.getBoundingClientRect();
+      const side = placement.split('-')[0] as Side;
+      const cursorLeaveFromRight = x > rect.right - rect.width / 2;
+      const cursorLeaveFromBottom = y > rect.bottom - rect.height / 2;
+      const isOverReferenceRect = isInside(clientPoint, refRect);
+
+      if (isOverFloatingEl) {
+        hasLanded = true;
+      }
+
+      if (isOverReferenceEl) {
+        hasLanded = false;
+      }
+
+      if (isOverReferenceEl && !isLeave) {
+        hasLanded = true;
         return;
       }
 
       // Prevent overlapping floating element from being stuck in an open-close
       // loop: https://github.com/floating-ui/floating-ui/issues/1910
       if (
-        event.type === 'mouseleave' &&
+        isLeave &&
         isElement(event.relatedTarget) &&
-        contains(refs.floating.current, event.relatedTarget)
+        contains(elements.floating, event.relatedTarget)
       ) {
         return;
       }
@@ -90,28 +120,6 @@ export function safePolygon<RT extends ReferenceType = ReferenceType>({
       ) {
         return;
       }
-
-      // The cursor landed, so we destroy the polygon logic
-      if (contains(refs.floating.current, target) && !leave) {
-        polygonIsDestroyed = true;
-        return;
-      }
-
-      if (
-        !refs.domReference.current ||
-        !refs.floating.current ||
-        placement == null ||
-        x == null ||
-        y == null
-      ) {
-        return;
-      }
-
-      const refRect = refs.domReference.current.getBoundingClientRect();
-      const rect = refs.floating.current.getBoundingClientRect();
-      const side = placement.split('-')[0] as Side;
-      const cursorLeaveFromRight = x > rect.right - rect.width / 2;
-      const cursorLeaveFromBottom = y > rect.bottom - rect.height / 2;
 
       // If the pointer is leaving from the opposite side, the "buffer" logic
       // creates a point where the floating element remains open, but should be
@@ -131,51 +139,61 @@ export function safePolygon<RT extends ReferenceType = ReferenceType>({
       // which can start beyond the ref element's edge, traversing back and
       // forth from the ref to the floating element can cause it to close. This
       // ensures it always remains open in that case.
+      let rectPoly: Point[] = [];
+
       switch (side) {
         case 'top':
-          if (
+          rectPoly = [
+            [rect.left, refRect.top + 1],
+            [rect.left, rect.bottom - 1],
+            [rect.right, rect.bottom - 1],
+            [rect.right, refRect.top + 1],
+          ];
+          isInsideRect =
             clientX >= rect.left &&
             clientX <= rect.right &&
             clientY >= rect.top &&
-            clientY <= refRect.top + 1
-          ) {
-            return;
-          }
+            clientY <= refRect.top + 1;
           break;
         case 'bottom':
-          if (
+          rectPoly = [
+            [rect.left, rect.top + 1],
+            [rect.left, refRect.bottom - 1],
+            [rect.right, refRect.bottom - 1],
+            [rect.right, rect.top + 1],
+          ];
+          isInsideRect =
             clientX >= rect.left &&
             clientX <= rect.right &&
             clientY >= refRect.bottom - 1 &&
-            clientY <= rect.bottom
-          ) {
-            return;
-          }
+            clientY <= rect.bottom;
           break;
         case 'left':
-          if (
+          rectPoly = [
+            [rect.right - 1, rect.bottom],
+            [rect.right - 1, rect.top],
+            [refRect.left + 1, rect.top],
+            [refRect.left + 1, rect.bottom],
+          ];
+          isInsideRect =
             clientX >= rect.left &&
             clientX <= refRect.left + 1 &&
             clientY >= rect.top &&
-            clientY <= rect.bottom
-          ) {
-            return;
-          }
+            clientY <= rect.bottom;
           break;
         case 'right':
-          if (
+          rectPoly = [
+            [refRect.right - 1, rect.bottom],
+            [refRect.right - 1, rect.top],
+            [rect.left + 1, rect.top],
+            [rect.left + 1, rect.bottom],
+          ];
+          isInsideRect =
             clientX >= refRect.right - 1 &&
             clientX <= rect.right &&
             clientY >= rect.top &&
-            clientY <= rect.bottom
-          ) {
-            return;
-          }
+            clientY <= rect.bottom;
           break;
-      }
-
-      if (polygonIsDestroyed) {
-        return close();
       }
 
       function getPolygon([x, y]: Point): Array<Point> {
@@ -338,16 +356,18 @@ export function safePolygon<RT extends ReferenceType = ReferenceType>({
         }
       }
 
-      const poly = getPolygon([x, y]);
+      const poly = isInsideRect ? rectPoly : getPolygon([x, y]);
 
-      if (__DEV__) {
-        debug?.(poly.slice(0, 4).join(', '));
+      if (isInsideRect) {
+        return;
+      } else if (hasLanded && !isOverReferenceRect) {
+        return close();
       }
 
       if (!isPointInPolygon([clientX, clientY], poly)) {
         close();
-      } else if (restMs) {
-        timeoutId = setTimeout(onClose, restMs);
+      } else if (restMs && !hasLanded) {
+        timeoutId = setTimeout(close, restMs);
       }
     };
   };

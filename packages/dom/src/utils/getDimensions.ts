@@ -1,15 +1,12 @@
 import type {Dimensions} from '@floating-ui/core';
-import {getBoundingClientRect} from './getBoundingClientRect';
+
+import {getCssDimensions} from './getCssDimensions';
 import {isHTMLElement} from './is';
 
 export function getDimensions(element: Element): Dimensions {
   if (isHTMLElement(element)) {
-    return {
-      width: element.offsetWidth,
-      height: element.offsetHeight,
-    };
+    return getCssDimensions(element);
   }
 
-  const rect = getBoundingClientRect(element);
-  return {width: rect.width, height: rect.height};
+  return element.getBoundingClientRect();
 }

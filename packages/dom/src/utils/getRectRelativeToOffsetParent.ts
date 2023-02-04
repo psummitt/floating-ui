@@ -1,9 +1,10 @@
 import type {Rect, Strategy, VirtualElement} from '@floating-ui/core';
+
 import {getBoundingClientRect} from './getBoundingClientRect';
 import {getDocumentElement} from './getDocumentElement';
 import {getNodeName} from './getNodeName';
 import {getNodeScroll} from './getNodeScroll';
-import getWindowScrollBarX from './getWindowScrollBarX';
+import {getWindowScrollBarX} from './getWindowScrollBarX';
 import {isHTMLElement, isOverflowElement} from './is';
 
 export function getRectRelativeToOffsetParent(

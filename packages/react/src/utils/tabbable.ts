@@ -1,4 +1,5 @@
 import {tabbable} from 'tabbable';
+
 import {activeElement} from './activeElement';
 import {contains} from './contains';
 import {getDocument} from './getDocument';
@@ -53,7 +54,7 @@ export function isOutsideEvent(
 export function disableFocusInside(container: HTMLElement) {
   const tabbableElements = tabbable(container, getTabbableOptions());
   tabbableElements.forEach((element) => {
-    element.dataset.tabindex = element.getAttribute('tabindex') ?? '';
+    element.dataset.tabindex = element.getAttribute('tabindex') || '';
     element.setAttribute('tabindex', '-1');
   });
 }

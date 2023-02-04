@@ -7,52 +7,73 @@
 > For help on migrating, check out the
 > [Migration Guide.](https://floating-ui.com/docs/migration)**
 
-[Floating UI](https://floating-ui.com) is a tiny, low-level library for creating
-"floating" elements like tooltips, popovers, dropdowns, menus, and more.
+[Floating UI](https://floating-ui.com) is a small library that helps you create
+"floating" elements such as tooltips, popovers, dropdowns, and more.
 
-The library provides two key functionalities:
+It offers two main features:
 
-### 1. Anchor positioning
+1. **Anchor positioning**: Anchor a floating element (such as a tooltip) to
+   another element (such as a button) while simultaneously ensuring it stays in
+   view as best as possible by avoiding collisions. This feature is available
+   for all platforms.
+2. **User interactions for React**: Hooks and components for composing
+   interactions to create accessible floating UI components.
 
-Anchor a floating element (like a tooltip) to another element (like a button)
-while simultaneously ensuring it stays in view as best as possible with
-collision detection.
+## Why
 
-### 2. User interactions for React
+Floating elements are absolutely positioned, typically anchored to another UI
+element. Ensuring a floating element remains anchored next to another element
+can be challenging, especially in unique layout contexts like scrolling
+containers.
 
-Hooks and components for composing interactions to create accessible floating UI
-components.
+Absolute positioning can also cause problems when the floating element is too
+close to the edge of the viewport and becomes obscured, also known as a
+collision. When a collision occurs, the position must be adjusted to ensure the
+floating element remains visible.
+
+Further, floating elements are often interactive, which can raise complex
+accessibility issues when designing user interactions.
+
+Floating UI offers a set of low-level features to help you navigate these
+challenges and build accessible floating UI components.
 
 ## Install
 
-Floating UI is platform-agnostic and supports a variety of platforms.
+To install Floating UI, you can use a package manager like npm or a
+[CDN](https://floating-ui.com/docs/getting-started#cdn). There are different
+versions available for different platforms.
 
 ### Vanilla
 
-Use on the web with vanilla JavaScript
-([view tutorial](https://floating-ui.com/docs/tutorial)).
+Use on the web with vanilla JavaScript.
 
 ```shell
 npm install @floating-ui/dom
 ```
+
+You can either start by
+[reading the tutorial](https://floating-ui.com/docs/tutorial), which teaches you
+how to use the library by building a basic tooltip, or you can jump right into
+the [API documentation](https://floating-ui.com/docs/computePosition).
 
 ### React
 
 Use with [React DOM](https://floating-ui.com/docs/react) or
 [React Native](https://floating-ui.com/docs/react-native).
 
-```shell
-# React DOM — positioning + interactions
-npm install @floating-ui/react
-```
+#### React DOM
 
 ```shell
-# React DOM — positioning only
+# Positioning + interactions
+npm install @floating-ui/react
+
+# Positioning only (smaller size)
 npm install @floating-ui/react-dom
 ```
 
+#### React Native
+
 ```shell
-# React Native — positioning only
 npm install @floating-ui/react-native
 ```
 
@@ -68,39 +89,12 @@ npm install @floating-ui/vue
 
 If you're targeting a platform other than the vanilla DOM (web), React, or React
 Native, you can create your own
-[Platform](https://floating-ui.com/docs/platform).
-
-This allows you to support things like Canvas/WebGL, or other platforms that can
-run JavaScript.
+[Platform](https://floating-ui.com/docs/platform). This allows you to support
+things like Canvas/WebGL, or other platforms that can run JavaScript.
 
 ```shell
 npm install @floating-ui/core
 ```
-
-## Quick start
-
-```js
-import {computePosition} from '@floating-ui/dom';
-
-const referenceElement = document.querySelector('#button');
-const floatingElement = document.querySelector('#tooltip');
-
-function applyStyles({x = 0, y = 0, strategy = 'absolute'}) {
-  Object.assign(floatingElement.style, {
-    position: strategy,
-    left: `${x}px`,
-    top: `${y}px`,
-  });
-}
-
-applyStyles();
-
-computePosition(referenceElement, floatingElement, {
-  placement: 'right',
-}).then(applyStyles);
-```
-
-[Visit the docs for detailed information](https://floating-ui.com/docs/computePosition).
 
 ## Package entry points
 
@@ -163,6 +157,19 @@ of testing the code.
 Below the main container are UI controls to turn on certain state and options.
 Every single combination of state is tested visually via the snapshots to cover
 as much as possible.
+
+## README Sponsors
+
+<table>
+  <tr>
+    <td>
+      <a href="https://milfordasset.com/" target="_blank" rel="noopener noreferrer"><img width="176" height="150" src="https://github.com/floating-ui/floating-ui/blob/master/website/assets/sponsors/milford.svg" alt="Milford" /></a>
+    </td>
+  </tr>
+</table>
+
+You can sponsor Floating UI in a variety of ways on
+[Open Collective](https://opencollective.com/floating-ui).
 
 ## Credits
 

@@ -1,12 +1,13 @@
-import type {Placement, Middleware} from '../types';
-import {getOppositePlacement} from '../utils/getOppositePlacement';
-import {getSide} from '../utils/getSide';
 import {
   detectOverflow,
   Options as DetectOverflowOptions,
 } from '../detectOverflow';
+import type {Middleware, Placement} from '../types';
 import {getAlignmentSides} from '../utils/getAlignmentSides';
 import {getExpandedPlacements} from '../utils/getExpandedPlacements';
+import {getOppositeAxisPlacements} from '../utils/getOppositeAxisPlacements';
+import {getOppositePlacement} from '../utils/getOppositePlacement';
+import {getSide} from '../utils/getSide';
 
 export interface Options {
   /**
@@ -29,6 +30,12 @@ export interface Options {
    * @default 'bestFit'
    */
   fallbackStrategy: 'bestFit' | 'initialPlacement';
+  /**
+   * Whether to allow fallback to the opposite axis, and if so, which
+   * side direction of the axis to prefer.
+   * @default 'none' (disallow fallback)
+   */
+  fallbackAxisSideDirection: 'none' | 'start' | 'end';
   /**
    * Whether to flip to placements with the opposite alignment if they fit
    * better.
@@ -62,18 +69,31 @@ export const flip = (
       crossAxis: checkCrossAxis = true,
       fallbackPlacements: specifiedFallbackPlacements,
       fallbackStrategy = 'bestFit',
+      fallbackAxisSideDirection = 'none',
       flipAlignment = true,
       ...detectOverflowOptions
     } = options;
 
     const side = getSide(placement);
-    const isBasePlacement = side === initialPlacement;
+    const isBasePlacement = getSide(initialPlacement) === initialPlacement;
+    const rtl = await platform.isRTL?.(elements.floating);
 
     const fallbackPlacements =
       specifiedFallbackPlacements ||
       (isBasePlacement || !flipAlignment
         ? [getOppositePlacement(initialPlacement)]
         : getExpandedPlacements(initialPlacement));
+
+    if (!specifiedFallbackPlacements && fallbackAxisSideDirection !== 'none') {
+      fallbackPlacements.push(
+        ...getOppositeAxisPlacements(
+          initialPlacement,
+          flipAlignment,
+          fallbackAxisSideDirection,
+          rtl
+        )
+      );
+    }
 
     const placements = [initialPlacement, ...fallbackPlacements];
 
@@ -90,23 +110,19 @@ export const flip = (
     }
 
     if (checkCrossAxis) {
-      const {main, cross} = getAlignmentSides(
-        placement,
-        rects,
-        await platform.isRTL?.(elements.floating)
-      );
+      const {main, cross} = getAlignmentSides(placement, rects, rtl);
       overflows.push(overflow[main], overflow[cross]);
     }
 
     overflowsData = [...overflowsData, {placement, overflows}];
 
-    // One or more sides is overflowing
+    // One or more sides is overflowing.
     if (!overflows.every((side) => side <= 0)) {
-      const nextIndex = (middlewareData.flip?.index ?? 0) + 1;
+      const nextIndex = (middlewareData.flip?.index || 0) + 1;
       const nextPlacement = placements[nextIndex];
 
       if (nextPlacement) {
-        // Try next placement and re-run the lifecycle
+        // Try next placement and re-run the lifecycle.
         return {
           data: {
             index: nextIndex,
@@ -118,29 +134,37 @@ export const flip = (
         };
       }
 
-      let resetPlacement: Placement = 'bottom';
-      switch (fallbackStrategy) {
-        case 'bestFit': {
-          const placement = overflowsData
-            .map(
-              (d) =>
-                [
-                  d,
-                  d.overflows
-                    .filter((overflow) => overflow > 0)
-                    .reduce((acc, overflow) => acc + overflow, 0),
-                ] as const
-            )
-            .sort((a, b) => a[1] - b[1])[0]?.[0].placement;
-          if (placement) {
-            resetPlacement = placement;
+      // First, find the candidates that fit on the mainAxis side of overflow,
+      // then find the placement that fits the best on the main crossAxis side.
+      let resetPlacement = overflowsData
+        .filter((d) => d.overflows[0] <= 0)
+        .sort((a, b) => a.overflows[1] - b.overflows[1])[0]?.placement;
+
+      // Otherwise fallback.
+      if (!resetPlacement) {
+        switch (fallbackStrategy) {
+          case 'bestFit': {
+            const placement = overflowsData
+              .map(
+                (d) =>
+                  [
+                    d.placement,
+                    d.overflows
+                      .filter((overflow) => overflow > 0)
+                      .reduce((acc, overflow) => acc + overflow, 0),
+                  ] as const
+              )
+              .sort((a, b) => a[1] - b[1])[0]?.[0];
+            if (placement) {
+              resetPlacement = placement;
+            }
+            break;
           }
-          break;
+          case 'initialPlacement':
+            resetPlacement = initialPlacement;
+            break;
+          default:
         }
-        case 'initialPlacement':
-          resetPlacement = initialPlacement;
-          break;
-        default:
       }
 
       if (placement !== resetPlacement) {

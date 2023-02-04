@@ -1,10 +1,10 @@
-import React from 'react';
 import Document, {
-  Html,
   Head,
+  Html,
   Main,
   NextScript,
 } from 'next/document';
+import React from 'react';
 
 class MyDocument extends Document {
   render() {
@@ -27,7 +27,6 @@ class MyDocument extends Document {
           data-remove-transitions=""
         >
           <div id="focus-root" tabIndex={-1} />
-          <div id="floating-root" />
           <Main />
           <NextScript />
         </body>

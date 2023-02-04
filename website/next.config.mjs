@@ -1,7 +1,8 @@
-const rehypePrettyCode = require('rehype-pretty-code');
-const fs = require('fs');
-const visit = require('unist-util-visit');
-const NpmApi = require('npm-api');
+import {readFileSync} from 'fs';
+import NpmApi from 'npm-api';
+import rehypePrettyCode from 'rehype-pretty-code';
+import remarkSmartypants from 'remark-smartypants';
+import visit from 'unist-util-visit';
 
 const replaceVariables = () => async (tree) => {
   let pkgs = [];
@@ -23,12 +24,24 @@ const replaceVariables = () => async (tree) => {
 };
 
 const rehypePrettyCodeOptions = {
-  theme: JSON.parse(
-    fs.readFileSync(
-      require.resolve('./assets/floating-ui-theme.json'),
-      'utf-8'
-    )
-  ),
+  theme: {
+    dark: JSON.parse(
+      readFileSync(
+        new URL(
+          './assets/floating-ui-theme.json',
+          import.meta.url
+        )
+      )
+    ),
+    light: JSON.parse(
+      readFileSync(
+        new URL(
+          './assets/floating-ui-light-theme.json',
+          import.meta.url
+        )
+      )
+    ),
+  },
   tokensMap: {
     objectKey: 'meta.object-literal.key',
     function: 'entity.name.function',
@@ -45,12 +58,25 @@ const rehypePrettyCodeOptions = {
   onVisitHighlightedLine(node) {
     node.properties.className = ['line', 'line--highlighted'];
   },
-  onVisitHighlightedWord(node) {
+  onVisitHighlightedWord(node, id) {
     node.properties.className = ['word'];
+
+    if (id) {
+      // If the word spans across syntax boundaries (e.g. punctuation), remove
+      // colors from the child nodes.
+      if (node.properties['data-rehype-pretty-code-wrapper']) {
+        node.children.forEach((childNode) => {
+          childNode.properties.style = '';
+        });
+      }
+
+      node.properties.style = '';
+      node.properties['data-word-id'] = id;
+    }
   },
 };
 
-module.exports = {
+export default {
   swcMinify: false,
   experimental: {esmExternals: true, scrollRestoration: true},
   pageExtensions: ['md', 'mdx', 'tsx', 'ts', 'jsx', 'js'],
@@ -74,7 +100,7 @@ module.exports = {
           /** @type {import('@mdx-js/loader').Options} */
           options: {
             providerImportSource: '@mdx-js/react',
-            remarkPlugins: [replaceVariables],
+            remarkPlugins: [replaceVariables, remarkSmartypants],
             rehypePlugins: [
               [rehypePrettyCode, rehypePrettyCodeOptions],
             ],

@@ -16,7 +16,7 @@ function App() {
   return (
     <>
       {/* reference element */}
-      {open && (
+      {isOpen && (
         <FloatingFocusManager context={context}>
           {/* floating element */}
         </FloatingFocusManager>
@@ -28,7 +28,7 @@ function App() {
 
 ## Props
 
-```js
+```ts
 interface Props {
   context: FloatingContext;
   order?: Array<'reference' | 'floating' | 'content'>;
@@ -108,6 +108,23 @@ management.
 </FloatingFocusManager>
 ```
 
+If there is no list navigation, then `modal{:.keyword}`
+behavior's focus trap will no longer work. To maintain the trap,
+you can place the initial focus on the floating element:
+
+```js /refs/
+const {context, refs} = useFloating();
+
+return (
+  <FloatingFocusManager
+    context={context}
+    initialFocus={refs.floating}
+  >
+    {/* floating element */}
+  </FloatingFocusManager>
+);
+```
+
 ### returnFocus
 
 default: `true{:js}`
@@ -160,7 +177,7 @@ element in the React tree. It can be portalled however.
 Ensure you have an explicit "close" button. This can be either
 visible to all users, or visually-hidden so it is only available
 to assistive tech (see
-[visuallyHiddenDismiss](/docs/FloatingFocusManager#visuallyhiddendismiss)).
+[`visuallyHiddenDismiss`](/docs/FloatingFocusManager#visuallyhiddendismiss)).
 Touch-based screen readers often will not have an `esc` key
 available to dismiss the element, so an explicit close button is
 required, otherwise the user will be trapped in the floating
@@ -179,8 +196,6 @@ portalled listbox items.
 ### visuallyHiddenDismiss
 
 default: `false{:js}`
-
-<Notice type="version">Available from v0.13.0</Notice>
 
 If your focus management is modal and there is no explicit close
 button available, you can use this prop to render a
@@ -210,8 +225,6 @@ when using `true{:js}` is `Dismiss{:.string}`.
 ### closeOnFocusOut
 
 default: `true{:js}`
-
-<Notice type="version">Available from v0.14.0</Notice>
 
 Determines whether `focusout` event listeners that control
 whether the floating element should be closed if the focus moves

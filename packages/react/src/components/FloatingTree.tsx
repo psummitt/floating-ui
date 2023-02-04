@@ -1,14 +1,15 @@
 import * as React from 'react';
 import useLayoutEffect from 'use-isomorphic-layout-effect';
-import type {FloatingNodeType, FloatingTreeType, ReferenceType} from '../types';
+
 import {useId} from '../hooks/useId';
+import type {FloatingNodeType, FloatingTreeType, ReferenceType} from '../types';
 import {createPubSub} from '../utils/createPubSub';
 
 const FloatingNodeContext = React.createContext<FloatingNodeType | null>(null);
 const FloatingTreeContext = React.createContext<FloatingTreeType | null>(null);
 
 export const useFloatingParentNodeId = (): string | null =>
-  React.useContext(FloatingNodeContext)?.id ?? null;
+  React.useContext(FloatingNodeContext)?.id || null;
 export const useFloatingTree = <
   RT extends ReferenceType = ReferenceType
 >(): FloatingTreeType<RT> | null =>

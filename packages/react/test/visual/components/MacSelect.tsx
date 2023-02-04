@@ -1,27 +1,28 @@
+import './MacSelect.css';
+
 import {
-  useFloating,
-  flip,
-  size,
   autoUpdate,
-  SideObject,
-  useInteractions,
-  inner,
-  useInnerOffset,
-  useClick,
-  useListNavigation,
-  useDismiss,
-  useRole,
-  useTypeahead,
+  flip,
   FloatingFocusManager,
   FloatingOverlay,
+  inner,
   offset,
   shift,
+  SideObject,
+  size,
+  useClick,
+  useDismiss,
+  useFloating,
+  useInnerOffset,
+  useInteractions,
+  useListNavigation,
+  useRole,
+  useTypeahead,
 } from '@floating-ui/react';
 import {useLayoutEffect, useRef, useState} from 'react';
 import {flushSync} from 'react-dom';
-import {FloatingPortal} from '../../../src';
 
-import './MacSelect.css';
+import {FloatingPortal} from '../../../src';
 
 const fruits = [
   '🍒 Cherry',
@@ -202,12 +203,11 @@ export function Main() {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [fallback, setFallback] = useState(false);
   const [innerOffset, setInnerOffset] = useState(0);
-  const [controlledScrolling, setControlledScrolling] = useState(false);
   const [touch, setTouch] = useState(false);
   const [scrollTop, setScrollTop] = useState(0);
   const [blockSelection, setBlockSelection] = useState(false);
 
-  const {x, y, reference, floating, strategy, context, refs} = useFloating({
+  const {x, y, reference, floating, strategy, context} = useFloating({
     placement: 'bottom-start',
     open,
     onOpenChange: (open) => {
@@ -284,27 +284,6 @@ export function Main() {
     }
   }, [open]);
 
-  // Scroll the `activeIndex` item into view only in "controlledScrolling"
-  // (keyboard nav) mode.
-  useLayoutEffect(() => {
-    if (open && controlledScrolling && activeIndex != null) {
-      requestAnimationFrame(() => {
-        listRef.current[activeIndex]?.scrollIntoView({block: 'nearest'});
-      });
-    }
-
-    setScrollTop(scrollRef.current?.scrollTop ?? 0);
-  }, [open, refs, controlledScrolling, activeIndex]);
-
-  // Scroll the `selectedIndex` into view upon opening the floating element.
-  useLayoutEffect(() => {
-    if (open && fallback && selectedIndex != null) {
-      requestAnimationFrame(() => {
-        listRef.current[selectedIndex]?.scrollIntoView({block: 'nearest'});
-      });
-    }
-  }, [open, fallback, selectedIndex]);
-
   const handleArrowScroll = (amount: number) => {
     if (fallback) {
       if (scrollRef.current) {
@@ -330,7 +309,8 @@ export function Main() {
 
   return (
     <>
-      <h1>Grid</h1>
+      <h1>MacSelect</h1>
+      <p></p>
       <div className="container">
         <button
           ref={reference}
@@ -352,11 +332,15 @@ export function Main() {
         <FloatingPortal>
           {open && (
             <FloatingOverlay lockScroll={!touch} style={{zIndex: 1}}>
-              <FloatingFocusManager context={context}>
+              <FloatingFocusManager
+                context={context}
+                initialFocus={-1}
+                modal={false}
+              >
                 <div
                   ref={floating}
                   style={{
-                    position: x == null ? 'fixed' : strategy,
+                    position: strategy,
                     top: y ?? 0,
                     left: x ?? 0,
                   }}
@@ -367,16 +351,7 @@ export function Main() {
                     ref={scrollRef}
                     {...getFloatingProps({
                       onScroll({currentTarget}) {
-                        // In React 18, the ScrollArrows need to synchronously
-                        // know this value to prevent painting at the wrong
-                        // time.
-                        flushSync(() => setScrollTop(currentTarget.scrollTop));
-                      },
-                      onKeyDown() {
-                        setControlledScrolling(true);
-                      },
-                      onPointerMove() {
-                        setControlledScrolling(false);
+                        setScrollTop(currentTarget.scrollTop);
                       },
                       onContextMenu(e) {
                         e.preventDefault();

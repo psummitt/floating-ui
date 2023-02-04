@@ -1,18 +1,19 @@
 /**
  * @jest-environment jsdom
  */
+import {act, cleanup, fireEvent, render, screen} from '@testing-library/react';
+import {useEffect, useLayoutEffect, useRef, useState} from 'react';
+
 import {
-  useFloating,
-  offset,
-  flip,
-  shift,
-  size,
   arrow,
+  flip,
   hide,
   limitShift,
+  offset,
+  shift,
+  size,
+  useFloating,
 } from '../src';
-import {render, fireEvent, screen, cleanup, act} from '@testing-library/react';
-import {useRef, useState, useEffect} from 'react';
 
 test('middleware is always fresh and does not cause an infinite loop', async () => {
   function InlineMiddleware() {
@@ -259,4 +260,122 @@ describe('whileElementsMounted', () => {
 
     cleanup();
   });
+});
+
+test('unstable callback refs', async () => {
+  function App() {
+    const {reference, floating} = useFloating();
+
+    return (
+      <>
+        <div ref={(node) => reference(node)} />
+        <div ref={(node) => floating(node)} />
+      </>
+    );
+  }
+
+  render(<App />);
+
+  await act(async () => {});
+
+  cleanup();
+});
+
+test('callback refs invoked during render', async () => {
+  function App() {
+    const [r, setR] = useState<HTMLDivElement | null>(null);
+    const [f, setF] = useState<HTMLDivElement | null>(null);
+
+    const {reference, floating} = useFloating();
+
+    reference(r);
+    floating(f);
+
+    return (
+      <>
+        <div ref={setR} />
+        <div ref={setF} />
+      </>
+    );
+  }
+
+  render(<App />);
+
+  await act(async () => {});
+
+  cleanup();
+});
+
+test('isPositioned', async () => {
+  const spy = jest.fn();
+
+  function App() {
+    const [open, setOpen] = useState(false);
+    const {reference, floating, isPositioned} = useFloating({
+      open,
+    });
+
+    useLayoutEffect(() => {
+      spy(isPositioned);
+    }, [isPositioned]);
+
+    return (
+      <>
+        <button ref={reference} onClick={() => setOpen((v) => !v)} />
+        {open && <div ref={floating} />}
+      </>
+    );
+  }
+
+  const {getByRole} = render(<App />);
+
+  fireEvent.click(getByRole('button'));
+
+  expect(spy.mock.calls[0][0]).toBe(false);
+
+  await act(async () => {});
+
+  expect(spy.mock.calls[1][0]).toBe(true);
+
+  fireEvent.click(getByRole('button'));
+
+  expect(spy.mock.calls[2][0]).toBe(false);
+
+  fireEvent.click(getByRole('button'));
+  await act(async () => {});
+
+  expect(spy.mock.calls[3][0]).toBe(true);
+
+  fireEvent.click(getByRole('button'));
+  expect(spy.mock.calls[4][0]).toBe(false);
+});
+
+test('external elements sync', async () => {
+  function App() {
+    const [referenceEl, setReferenceEl] = useState<HTMLElement | null>(null);
+    const [floatingEl, setFloatingEl] = useState<HTMLElement | null>(null);
+    const {x, y, refs} = useFloating();
+
+    useLayoutEffect(() => {
+      refs.setReference(referenceEl);
+    }, [refs, referenceEl]);
+
+    useLayoutEffect(() => {
+      refs.setFloating(floatingEl);
+    }, [refs, floatingEl]);
+
+    return (
+      <>
+        <div ref={setReferenceEl} />
+        <div ref={setFloatingEl} />
+        <div data-testid="value">{`${x},${y}`}</div>
+      </>
+    );
+  }
+
+  const {getByTestId} = render(<App />);
+
+  await act(async () => {});
+
+  expect(getByTestId('value').textContent).toBe('0,0');
 });

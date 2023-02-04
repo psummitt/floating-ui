@@ -1,6 +1,7 @@
 # FloatingPortal
 
-Portals your floating element outside the main app node.
+Portals a floating element into a given container element — by
+default, outside of the app root and into the body.
 
 ```js
 import {FloatingPortal} from '@floating-ui/react';
@@ -8,7 +9,7 @@ import {FloatingPortal} from '@floating-ui/react';
 function Tooltip() {
   return (
     <FloatingPortal>
-      {open && <div>My portalled element</div>}
+      {isOpen && <div>My portalled element</div>}
     </FloatingPortal>
   );
 }
@@ -21,7 +22,7 @@ function Tooltip() {
 
 ## Props
 
-```js
+```ts
 interface Props {
   id?: string;
   root?: HTMLElement | null;
@@ -44,7 +45,7 @@ controlled externally or is static.
 
 ```js
 <FloatingPortal id="custom-root-id">
-  {open && <div>Tooltip</div>}
+  {isOpen && <div>Tooltip</div>}
 </FloatingPortal>
 ```
 
@@ -55,7 +56,7 @@ supports shadow roots.
 
 ```js
 <FloatingPortal root={shadowRootNode}>
-  {open && <div>Tooltip</div>}
+  {isOpen && <div>Tooltip</div>}
 </FloatingPortal>
 ```
 
@@ -69,7 +70,7 @@ context based on the React tree instead of the DOM tree.
 
 ```js
 <FloatingPortal preserveTabOrder={false}>
-  {open && <div>Tooltip</div>}
+  {isOpen && <div>Tooltip</div>}
 </FloatingPortal>
 ```
 
@@ -82,7 +83,7 @@ in the DOM.
 ```js
 function App() {
   const portalNode = useFloatingPortalNode({
-    id: 'custom-root-id', // 'floating-ui-root' by default
+    id: 'custom-root-id',
     enabled: false, // true by default
   });
 

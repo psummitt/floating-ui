@@ -1,10 +1,12 @@
-import {cloneElement, useRef, useState} from 'react';
-import {Context as ResponsiveContext} from 'react-responsive';
 import {act, cleanup, fireEvent, render, screen} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import {cloneElement, useRef, useState} from 'react';
+import {Context as ResponsiveContext} from 'react-responsive';
+
 import {
   FloatingFocusManager,
   FloatingNode,
+  FloatingPortal,
   FloatingTree,
   useClick,
   useDismiss,
@@ -12,11 +14,10 @@ import {
   useFloatingNodeId,
   useFloatingParentNodeId,
   useInteractions,
-  FloatingPortal,
 } from '../../src';
 import {Props} from '../../src/components/FloatingFocusManager';
-import {Main as Navigation} from '../visual/components/Navigation';
 import {Main as Drawer} from '../visual/components/Drawer';
+import {Main as Navigation} from '../visual/components/Navigation';
 
 function App(
   props: Partial<Omit<Props, 'initialFocus'> & {initialFocus?: 'two' | number}>
@@ -275,7 +276,7 @@ describe('modal', () => {
     await userEvent.tab();
 
     // Wait for the setTimeout that wraps onOpenChange(false).
-    await new Promise((resolve) => setTimeout(resolve));
+    await act(() => new Promise((resolve) => setTimeout(resolve)));
 
     // Focus leaving the floating element closes it.
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -728,6 +729,20 @@ describe('Drawer', () => {
     expect(screen.queryByText('Close')).toBeInTheDocument();
     await userEvent.click(screen.getByText('Next button'));
     await act(async () => {});
+    expect(screen.queryByText('Close')).toBeInTheDocument();
+  });
+
+  test('closeOnFocusOut=false - does not close when tabbing out', async () => {
+    render(
+      <ResponsiveContext.Provider value={{width: 1600}}>
+        <Drawer />
+      </ResponsiveContext.Provider>
+    );
+    await userEvent.click(screen.getByText('My button'));
+    expect(screen.queryByText('Close')).toBeInTheDocument();
+    await userEvent.keyboard('{Tab}');
+    await act(async () => {});
+    expect(document.activeElement).toBe(screen.getByText('Next button'));
     expect(screen.queryByText('Close')).toBeInTheDocument();
   });
 });

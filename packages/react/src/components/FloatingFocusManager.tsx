@@ -1,35 +1,44 @@
 import {hideOthers} from 'aria-hidden';
-import {FocusableElement, tabbable} from 'tabbable';
 import * as React from 'react';
+import {FocusableElement, tabbable} from 'tabbable';
 import useLayoutEffect from 'use-isomorphic-layout-effect';
-import {usePortalContext} from './FloatingPortal';
-import {useFloatingTree} from './FloatingTree';
+
+import {DismissPayload} from '../hooks/useDismiss';
+import {useLatestRef} from '../hooks/utils/useLatestRef';
 import type {FloatingContext, ReferenceType} from '../types';
 import {activeElement} from '../utils/activeElement';
-import {FocusGuard, HIDDEN_STYLES} from './FocusGuard';
+import {contains} from '../utils/contains';
+import {enqueueFocus} from '../utils/enqueueFocus';
+import {getAncestors} from '../utils/getAncestors';
+import {getChildren} from '../utils/getChildren';
 import {getDocument} from '../utils/getDocument';
 import {getTarget} from '../utils/getTarget';
 import {isHTMLElement} from '../utils/is';
 import {isTypeableElement} from '../utils/isTypeableElement';
 import {stopEvent} from '../utils/stopEvent';
-import {useLatestRef} from '../hooks/utils/useLatestRef';
 import {
   getNextTabbable,
   getPreviousTabbable,
   getTabbableOptions,
   isOutsideEvent,
 } from '../utils/tabbable';
-import {getChildren} from '../utils/getChildren';
-import {getAncestors} from '../utils/getAncestors';
-import {enqueueFocus} from '../utils/enqueueFocus';
-import {contains} from '../utils/contains';
-import {DismissPayload} from '../hooks/useDismiss';
+import {usePortalContext} from './FloatingPortal';
+import {useFloatingTree} from './FloatingTree';
+import {FocusGuard, HIDDEN_STYLES} from './FocusGuard';
 
 const VisuallyHiddenDismiss = React.forwardRef(function VisuallyHiddenDismiss(
   props: React.ButtonHTMLAttributes<HTMLButtonElement>,
   ref: React.Ref<HTMLButtonElement>
 ) {
-  return <button {...props} ref={ref} tabIndex={-1} style={HIDDEN_STYLES} />;
+  return (
+    <button
+      {...props}
+      type="button"
+      ref={ref}
+      tabIndex={-1}
+      style={HIDDEN_STYLES}
+    />
+  );
 });
 
 export interface Props<RT extends ReferenceType = ReferenceType> {
@@ -64,7 +73,8 @@ export function FloatingFocusManager<RT extends ReferenceType = ReferenceType>({
     nodeId,
     onOpenChange,
     events,
-    _: {domReference},
+    dataRef,
+    elements: {domReference, floating},
   } = context;
 
   const orderRef = useLatestRef(order);
@@ -75,30 +85,32 @@ export function FloatingFocusManager<RT extends ReferenceType = ReferenceType>({
   >(null);
 
   // Controlled by `useListNavigation`.
-  const initialFocusControlled =
+  const ignoreInitialFocus =
     typeof initialFocus === 'number' && initialFocus < 0;
 
   const startDismissButtonRef = React.useRef<HTMLButtonElement>(null);
   const endDismissButtonRef = React.useRef<HTMLButtonElement>(null);
   const preventReturnFocusRef = React.useRef(false);
   const previouslyFocusedElementRef = React.useRef<Element | null>(null);
-  const insidePortal = portalContext != null;
+  const isPointerDownRef = React.useRef(false);
+
+  const isInsidePortal = portalContext != null;
 
   // If the reference is a combobox and is typeable (e.g. input/textarea),
   // there are different focus semantics. The guards should not be rendered, but
   // aria-hidden should be applied to all nodes still. Further, the visually
   // hidden dismiss button should only appear at the end of the list, not the
   // start.
-  const typeableCombobox =
+  const isTypeableCombobox =
     domReference &&
     domReference.getAttribute('role') === 'combobox' &&
     isTypeableElement(domReference);
 
   const getTabbableContent = React.useCallback(
-    (container: HTMLElement | null = refs.floating.current) => {
+    (container: HTMLElement | null = floating) => {
       return container ? tabbable(container, getTabbableOptions()) : [];
     },
-    [refs]
+    [floating]
   );
 
   const getTabbableElements = React.useCallback(
@@ -107,12 +119,12 @@ export function FloatingFocusManager<RT extends ReferenceType = ReferenceType>({
 
       return orderRef.current
         .map((type) => {
-          if (refs.domReference.current && type === 'reference') {
-            return refs.domReference.current;
+          if (domReference && type === 'reference') {
+            return domReference;
           }
 
-          if (refs.floating.current && type === 'floating') {
-            return refs.floating.current;
+          if (floating && type === 'floating') {
+            return floating;
           }
 
           return content;
@@ -120,7 +132,7 @@ export function FloatingFocusManager<RT extends ReferenceType = ReferenceType>({
         .filter(Boolean)
         .flat() as Array<FocusableElement>;
     },
-    [orderRef, refs, getTabbableContent]
+    [domReference, floating, orderRef, getTabbableContent]
   );
 
   React.useEffect(() => {
@@ -131,17 +143,14 @@ export function FloatingFocusManager<RT extends ReferenceType = ReferenceType>({
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === 'Tab') {
         // The focus guards have nothing to focus, so we need to stop the event.
-        if (getTabbableContent().length === 0 && !typeableCombobox) {
+        if (getTabbableContent().length === 0 && !isTypeableCombobox) {
           stopEvent(event);
         }
 
         const els = getTabbableElements();
         const target = getTarget(event);
 
-        if (
-          orderRef.current[0] === 'reference' &&
-          target === refs.domReference.current
-        ) {
+        if (orderRef.current[0] === 'reference' && target === domReference) {
           stopEvent(event);
           if (event.shiftKey) {
             enqueueFocus(els[els.length - 1]);
@@ -152,7 +161,7 @@ export function FloatingFocusManager<RT extends ReferenceType = ReferenceType>({
 
         if (
           orderRef.current[1] === 'floating' &&
-          target === refs.floating.current &&
+          target === floating &&
           event.shiftKey
         ) {
           stopEvent(event);
@@ -161,16 +170,18 @@ export function FloatingFocusManager<RT extends ReferenceType = ReferenceType>({
       }
     }
 
-    const doc = getDocument(refs.floating.current);
+    const doc = getDocument(floating);
     doc.addEventListener('keydown', onKeyDown);
     return () => {
       doc.removeEventListener('keydown', onKeyDown);
     };
   }, [
+    domReference,
+    floating,
     modal,
     orderRef,
     refs,
-    typeableCombobox,
+    isTypeableCombobox,
     getTabbableContent,
     getTabbableElements,
   ]);
@@ -179,16 +190,12 @@ export function FloatingFocusManager<RT extends ReferenceType = ReferenceType>({
     if (!closeOnFocusOut) {
       return;
     }
-    const floating = refs.floating.current;
-    const reference = refs.domReference.current;
-
-    let isPointerDown = false;
 
     // In Safari, buttons lose focus when pressing them.
     function handlePointerDown() {
-      isPointerDown = true;
+      isPointerDownRef.current = true;
       setTimeout(() => {
-        isPointerDown = false;
+        isPointerDownRef.current = false;
       });
     }
 
@@ -196,7 +203,7 @@ export function FloatingFocusManager<RT extends ReferenceType = ReferenceType>({
       const relatedTarget = event.relatedTarget as Element | null;
 
       const movedToUnrelatedNode = !(
-        contains(reference, relatedTarget) ||
+        contains(domReference, relatedTarget) ||
         contains(floating, relatedTarget) ||
         contains(relatedTarget, floating) ||
         contains(portalContext?.portalNode, relatedTarget) ||
@@ -209,13 +216,13 @@ export function FloatingFocusManager<RT extends ReferenceType = ReferenceType>({
         (tree &&
           (getChildren(tree.nodesRef.current, nodeId).find(
             (node) =>
-              contains(node.context?.refs.floating.current, relatedTarget) ||
-              contains(node.context?.refs.domReference.current, relatedTarget)
+              contains(node.context?.elements.floating, relatedTarget) ||
+              contains(node.context?.elements.domReference, relatedTarget)
           ) ||
             getAncestors(tree.nodesRef.current, nodeId).find(
               (node) =>
-                node.context?.refs.floating.current === relatedTarget ||
-                node.context?.refs.domReference.current === relatedTarget
+                node.context?.elements.floating === relatedTarget ||
+                node.context?.elements.domReference === relatedTarget
             )))
       );
 
@@ -224,7 +231,7 @@ export function FloatingFocusManager<RT extends ReferenceType = ReferenceType>({
       if (
         relatedTarget &&
         movedToUnrelatedNode &&
-        !isPointerDown &&
+        !isPointerDownRef.current &&
         // Fix React 18 Strict Mode returnFocus due to double rendering.
         relatedTarget !== previouslyFocusedElementRef.current
       ) {
@@ -236,27 +243,34 @@ export function FloatingFocusManager<RT extends ReferenceType = ReferenceType>({
       }
     }
 
-    if (floating && isHTMLElement(reference)) {
-      reference.addEventListener('focusout', handleFocusOutside);
-      reference.addEventListener('pointerdown', handlePointerDown);
+    if (floating && isHTMLElement(domReference)) {
+      domReference.addEventListener('focusout', handleFocusOutside);
+      domReference.addEventListener('pointerdown', handlePointerDown);
       !modal && floating.addEventListener('focusout', handleFocusOutside);
 
       return () => {
-        reference.removeEventListener('focusout', handleFocusOutside);
-        reference.removeEventListener('pointerdown', handlePointerDown);
+        domReference.removeEventListener('focusout', handleFocusOutside);
+        domReference.removeEventListener('pointerdown', handlePointerDown);
         !modal && floating.removeEventListener('focusout', handleFocusOutside);
       };
     }
-  }, [modal, nodeId, tree, refs, portalContext, onOpenChange, closeOnFocusOut]);
+  }, [
+    domReference,
+    floating,
+    modal,
+    nodeId,
+    tree,
+    portalContext,
+    onOpenChange,
+    closeOnFocusOut,
+  ]);
 
   React.useEffect(() => {
-    const floating = refs.floating.current;
-    const reference = refs.domReference.current;
     // Don't hide portals nested within the parent portal.
     const portalNodes = Array.from(
       portalContext?.portalNode?.querySelectorAll(
         '[data-floating-ui-portal]'
-      ) ?? []
+      ) || []
     );
 
     function getDismissButtons() {
@@ -266,11 +280,11 @@ export function FloatingFocusManager<RT extends ReferenceType = ReferenceType>({
       ].filter(Boolean) as Array<Element>;
     }
 
-    if (floating && isHTMLElement(reference) && modal) {
+    if (floating && modal) {
       const insideNodes = [floating, ...portalNodes, ...getDismissButtons()];
       const cleanup = hideOthers(
-        orderRef.current.includes('reference') || typeableCombobox
-          ? insideNodes.concat(reference)
+        orderRef.current.includes('reference') || isTypeableCombobox
+          ? insideNodes.concat(domReference || [])
           : insideNodes
       );
 
@@ -278,11 +292,16 @@ export function FloatingFocusManager<RT extends ReferenceType = ReferenceType>({
         cleanup();
       };
     }
-  }, [modal, orderRef, portalContext, refs, typeableCombobox]);
+  }, [
+    domReference,
+    floating,
+    modal,
+    orderRef,
+    portalContext,
+    isTypeableCombobox,
+  ]);
 
   React.useEffect(() => {
-    const floating = refs.floating.current;
-
     if (modal && !guards && floating) {
       const tabIndexValues: Array<string | null> = [];
       const options = getTabbableOptions();
@@ -310,22 +329,17 @@ export function FloatingFocusManager<RT extends ReferenceType = ReferenceType>({
         });
       };
     }
-  }, [modal, guards, refs, getTabbableElements]);
+  }, [floating, modal, guards, getTabbableElements]);
 
-  // Layout effect to ensure that the previouslyFocusedElement is set before
-  // focus is moved inside the floating element via hooks like
-  // useListNavigation.
   useLayoutEffect(() => {
-    const floating = refs.floating.current;
-    if (!floating) {
-      return;
-    }
+    if (!floating) return;
 
     const doc = getDocument(floating);
 
     let returnFocusValue = returnFocus;
     let preventReturnFocusScroll = false;
     const previouslyFocusedElement = activeElement(doc);
+    const contextData = dataRef.current;
 
     previouslyFocusedElementRef.current = previouslyFocusedElement;
 
@@ -337,7 +351,7 @@ export function FloatingFocusManager<RT extends ReferenceType = ReferenceType>({
 
     // If the `useListNavigation` hook is active, always ignore `initialFocus`
     // because it has its own handling of the initial focus.
-    !initialFocusControlled &&
+    !ignoreInitialFocus &&
       enqueueFocus(elToFocus, {preventScroll: elToFocus === floating});
 
     // Dismissing via outside press should always ignore `returnFocus` to
@@ -375,23 +389,53 @@ export function FloatingFocusManager<RT extends ReferenceType = ReferenceType>({
         isHTMLElement(previouslyFocusedElementRef.current) &&
         !preventReturnFocusRef.current
       ) {
-        enqueueFocus(previouslyFocusedElementRef.current, {
-          preventScroll: preventReturnFocusScroll,
-          // When dismissing nested floating elements, by the time the rAF has
-          // executed, the menus will all have been unmounted. When they try
-          // to get focused, the calls get ignored — leaving the root reference
-          // focused as desired.
-          cancelPrevious: false,
-        });
+        // `isPointerDownRef.current` to avoid the focus ring from appearing on
+        // the reference element when click-toggling it.
+        if (!refs.domReference.current || isPointerDownRef.current) {
+          enqueueFocus(previouslyFocusedElementRef.current, {
+            // When dismissing nested floating elements, by the time the rAF has
+            // executed, the menus will all have been unmounted. When they try
+            // to get focused, the calls get ignored — leaving the root
+            // reference focused as desired.
+            cancelPrevious: false,
+            preventScroll: preventReturnFocusScroll,
+          });
+        } else {
+          // If the user has specified a `keydown` listener that calls
+          // setOpen(false) (e.g. selecting an item and closing the floating
+          // element), then sync return focus causes `useClick` to immediately
+          // re-open it, unless they call `event.preventDefault()` in the
+          // `keydown` listener. This helps keep backwards compatibility with
+          // older examples.
+          contextData.__syncReturnFocus = true;
+
+          // In Safari, `useListNavigation` moves focus sync, so making this
+          // sync ensures the initial item remains focused despite this being
+          // invoked in Strict Mode due to double-invoked useEffects. This also
+          // has the positive side effect of closing a modally focus-managed
+          // <Menu> on `Tab` keydown to move naturally to the next focusable
+          // element.
+          previouslyFocusedElementRef.current?.focus({
+            preventScroll: preventReturnFocusScroll,
+          });
+
+          setTimeout(() => {
+            // This isn't an actual property the user should access, make sure
+            // it doesn't persist.
+            delete contextData.__syncReturnFocus;
+          });
+        }
       }
     };
   }, [
+    floating,
     getTabbableElements,
     initialFocus,
     returnFocus,
+    dataRef,
     refs,
     events,
-    initialFocusControlled,
+    ignoreInitialFocus,
   ]);
 
   // Synchronize the `context` & `modal` value to the FloatingPortal context.
@@ -401,21 +445,34 @@ export function FloatingFocusManager<RT extends ReferenceType = ReferenceType>({
     portalContext.setFocusManagerState({
       ...context,
       modal,
+      closeOnFocusOut,
       // Not concerned about the <RT> generic type.
     } as any);
     return () => {
       portalContext.setFocusManagerState(null);
     };
-  }, [portalContext, modal, context]);
+  }, [portalContext, modal, closeOnFocusOut, context]);
 
   useLayoutEffect(() => {
-    if (getTabbableContent().length === 0 && !initialFocusControlled) {
-      setTabbableContentLength(0);
+    if (ignoreInitialFocus || !floating) return;
+
+    function setState() {
+      setTabbableContentLength(getTabbableContent().length);
     }
-  }, [getTabbableContent, refs, initialFocusControlled]);
+
+    setState();
+
+    if (typeof MutationObserver === 'function') {
+      const observer = new MutationObserver(setState);
+      observer.observe(floating, {childList: true, subtree: true});
+      return () => {
+        observer.disconnect();
+      };
+    }
+  }, [floating, getTabbableContent, ignoreInitialFocus, refs]);
 
   const shouldRenderGuards =
-    guards && (insidePortal || modal) && !typeableCombobox;
+    guards && (isInsidePortal || modal) && !isTypeableCombobox;
 
   function renderDismissButton(location: 'start' | 'end') {
     return visuallyHiddenDismiss && modal ? (
@@ -434,6 +491,7 @@ export function FloatingFocusManager<RT extends ReferenceType = ReferenceType>({
     <>
       {shouldRenderGuards && (
         <FocusGuard
+          data-type="inside"
           ref={portalContext?.beforeInsideRef}
           onFocus={(event) => {
             if (modal) {
@@ -460,7 +518,7 @@ export function FloatingFocusManager<RT extends ReferenceType = ReferenceType>({
         Ensure the first swipe is the list item. The end of the listbox popup
         will have a dismiss button.
       */}
-      {typeableCombobox ? null : renderDismissButton('start')}
+      {isTypeableCombobox ? null : renderDismissButton('start')}
       {React.cloneElement(
         children,
         tabbableContentLength === 0 || order.includes('floating')
@@ -470,6 +528,7 @@ export function FloatingFocusManager<RT extends ReferenceType = ReferenceType>({
       {renderDismissButton('end')}
       {shouldRenderGuards && (
         <FocusGuard
+          data-type="inside"
           ref={portalContext?.afterInsideRef}
           onFocus={(event) => {
             if (modal) {

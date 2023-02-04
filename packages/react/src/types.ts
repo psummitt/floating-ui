@@ -1,23 +1,94 @@
-import * as React from 'react';
 import type {
   ComputePositionReturn,
-  VirtualElement,
-  Placement,
   Middleware,
+  Placement,
   Strategy,
-} from '@floating-ui/dom';
-import type {UseFloatingReturn as UsePositionFloatingReturn} from '@floating-ui/react-dom';
+  UseFloatingReturn as UsePositionFloatingReturn,
+  VirtualElement,
+} from '@floating-ui/react-dom';
+import * as React from 'react';
+
 import type {DismissPayload} from './hooks/useDismiss';
 
-export * from '@floating-ui/dom';
 export * from '.';
+export {Props as UseClickProps} from './hooks/useClick';
+export {Props as UseDismissProps} from './hooks/useDismiss';
+export {Props as UseFocusProps} from './hooks/useFocus';
+export {Props as UseHoverProps} from './hooks/useHover';
+export {Props as UseListNavigationProps} from './hooks/useListNavigation';
+export {Props as UseRoleProps} from './hooks/useRole';
+export {
+  Props as UseTransitionStatusProps,
+  UseTransitionStylesProps,
+} from './hooks/useTransition';
+export {Props as UseTypeaheadProps} from './hooks/useTypeahead';
+export {InnerProps, UseInnerOffsetProps} from './inner';
+export type {
+  AlignedPlacement,
+  Alignment,
+  AutoUpdateOptions,
+  Axis,
+  Boundary,
+  ClientRectObject,
+  ComputePositionConfig,
+  ComputePositionReturn,
+  Coords,
+  DetectOverflowOptions,
+  Dimensions,
+  ElementContext,
+  ElementRects,
+  Elements,
+  FloatingElement,
+  Length,
+  Middleware,
+  MiddlewareArguments,
+  MiddlewareData,
+  MiddlewareReturn,
+  NodeScroll,
+  Padding,
+  Placement,
+  Platform,
+  Rect,
+  ReferenceElement,
+  RootBoundary,
+  Side,
+  SideObject,
+  SizeOptions,
+  Strategy,
+  VirtualElement,
+} from '@floating-ui/react-dom';
+export {
+  arrow,
+  autoPlacement,
+  autoUpdate,
+  computePosition,
+  detectOverflow,
+  flip,
+  getOverflowAncestors,
+  hide,
+  inline,
+  limitShift,
+  offset,
+  platform,
+  shift,
+  size,
+} from '@floating-ui/react-dom';
 
-export {arrow} from '@floating-ui/react-dom';
+export type NarrowedElement<T> = T extends Element ? T : Element;
 
-export interface ExtendedRefs<RT extends ReferenceType = ReferenceType> {
-  reference: React.MutableRefObject<RT | null>;
+export interface ExtendedRefs<RT> {
+  reference: React.MutableRefObject<ReferenceType | null>;
   floating: React.MutableRefObject<HTMLElement | null>;
-  domReference: React.MutableRefObject<Element | null>;
+  domReference: React.MutableRefObject<NarrowedElement<RT> | null>;
+  setReference: (node: RT | null) => void;
+  setFloating: (node: HTMLElement | null) => void;
+  setPositionReference: (node: ReferenceType | null) => void;
+}
+
+export interface ExtendedElements<RT> {
+  reference: ReferenceType | null;
+  floating: HTMLElement | null;
+  domReference: NarrowedElement<RT> | null;
 }
 
 export interface FloatingEvents {
@@ -36,16 +107,14 @@ export interface ContextData {
 }
 
 export interface FloatingContext<RT extends ReferenceType = ReferenceType>
-  extends UsePositionFloatingReturn<RT> {
+  extends Omit<UsePositionFloatingReturn<RT>, 'refs' | 'elements'> {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   events: FloatingEvents;
   dataRef: React.MutableRefObject<ContextData>;
   nodeId: string | undefined;
   refs: ExtendedRefs<RT>;
-  _: {
-    domReference: Element | null;
-  };
+  elements: ExtendedElements<RT>;
 }
 
 export interface FloatingNodeType<RT extends ReferenceType = ReferenceType> {
@@ -79,8 +148,11 @@ export type UseFloatingReturn<RT extends ReferenceType = ReferenceType> =
     update: () => void;
     reference: (node: RT | null) => void;
     floating: (node: HTMLElement | null) => void;
+    positionReference: (node: ReferenceType | null) => void;
     context: FloatingContext<RT>;
     refs: ExtendedRefs<RT>;
+    elements: ExtendedElements<RT>;
+    isPositioned: boolean;
   };
 
 export interface UseFloatingProps<RT extends ReferenceType = ReferenceType> {

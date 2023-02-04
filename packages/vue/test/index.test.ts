@@ -1,5 +1,8 @@
 /* eslint-disable react-hooks/rules-of-hooks */
 
+import {cleanup, fireEvent, render, waitFor} from '@testing-library/vue';
+import {defineComponent, effectScope, ref, toRef} from 'vue';
+
 import {
   arrow,
   FloatingElement,
@@ -10,9 +13,7 @@ import {
   Strategy,
   useFloating,
 } from '../src';
-import {UseFloatingOptions, ArrowOptions} from '../src/types';
-import {defineComponent, effectScope, ref, toRef} from 'vue';
-import {render, waitFor, cleanup, fireEvent} from '@testing-library/vue';
+import {ArrowOptions, UseFloatingOptions} from '../src/types';
 
 describe('useFloating', () => {
   function setup(options?: UseFloatingOptions) {
@@ -116,6 +117,59 @@ describe('useFloating', () => {
 
     await waitFor(() => {
       expect(getByTestId('position').textContent).toBe('fixed');
+    });
+  });
+
+  test('updates `isPositioned` when position is computed', async () => {
+    const App = defineComponent({
+      name: 'App',
+      setup() {
+        return setup();
+      },
+      template: /* HTML */ `
+        <div ref="reference" />
+        <div ref="floating" />
+        <div data-testid="isPositioned">{{isPositioned}}</div>
+      `,
+    });
+
+    const {getByTestId} = render(App);
+
+    await waitFor(() => {
+      expect(getByTestId('isPositioned').textContent).toBe('false');
+    });
+
+    await waitFor(() => {
+      expect(getByTestId('isPositioned').textContent).toBe('true');
+    });
+  });
+
+  test('resets `isPositioned` on open change', async () => {
+    const App = defineComponent({
+      name: 'App',
+      props: ['open'],
+      setup(props: {open?: boolean}) {
+        return setup({open: toRef(props, 'open')});
+      },
+      template: /* HTML */ `
+        <div ref="reference" />
+        <div ref="floating" />
+        <div data-testid="isPositioned">{{isPositioned}}</div>
+      `,
+    });
+
+    const {rerender, getByTestId} = render(App, {
+      props: {open: true},
+    });
+
+    await waitFor(() => {
+      expect(getByTestId('isPositioned').textContent).toBe('true');
+    });
+
+    await rerender({open: false});
+
+    await waitFor(() => {
+      expect(getByTestId('isPositioned').textContent).toBe('false');
     });
   });
 

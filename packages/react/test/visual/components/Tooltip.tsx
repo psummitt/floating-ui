@@ -1,17 +1,23 @@
-import React, {cloneElement, isValidElement, useEffect, useState} from 'react';
 import {
-  Placement,
-  offset,
-  flip,
-  shift,
   autoUpdate,
-  useFloating,
-  useInteractions,
-  useHover,
-  useFocus,
-  useRole,
+  flip,
+  FloatingDelayGroup,
+  FloatingPortal,
+  offset,
+  Placement,
+  shift,
+  useDelayGroup,
+  useDelayGroupContext,
   useDismiss,
+  useFloating,
+  useFocus,
+  useHover,
+  useInteractions,
+  useRole,
+  useTransitionStyles,
 } from '@floating-ui/react';
+import {cloneElement, isValidElement, useId, useState} from 'react';
+
 import {Controls} from '../utils/Controls';
 
 type Delay = number | Partial<{open: number; close: number}>;
@@ -33,9 +39,23 @@ export const Main = () => {
         A floating element that displays a label describing another element.
       </p>
       <div className="container">
-        <Tooltip label="My tooltip" delay={delay}>
+        <Tooltip label="My tooltip 3" delay={delay}>
           <button>My button</button>
         </Tooltip>
+
+        <div>
+          <FloatingDelayGroup delay={{open: 500, close: 200}} timeoutMs={200}>
+            <Tooltip label="My tooltip" delay={delay}>
+              <button>My button</button>
+            </Tooltip>
+            <Tooltip label="My tooltip 2" delay={delay}>
+              <button>My button</button>
+            </Tooltip>
+            <Tooltip label="My tooltip 3" delay={delay}>
+              <button>My button</button>
+            </Tooltip>
+          </FloatingDelayGroup>
+        </div>
       </div>
       <Controls>
         <button
@@ -79,48 +99,80 @@ export function Tooltip({
   placement = 'top',
   delay = 0,
 }: Props) {
+  const {delay: groupDelay, currentId, isInstantPhase} = useDelayGroupContext();
   const [open, setOpen] = useState(false);
+  const id = useId();
 
-  const {x, y, reference, floating, strategy, context, refs, update} =
-    useFloating({
-      placement,
-      open,
-      onOpenChange: setOpen,
-      middleware: [offset(5), flip(), shift({padding: 8})],
-    });
+  const {x, y, strategy, refs, context} = useFloating({
+    placement,
+    open,
+    onOpenChange: setOpen,
+    middleware: [offset(5), flip(), shift({padding: 8})],
+    whileElementsMounted: autoUpdate,
+  });
 
   const {getReferenceProps, getFloatingProps} = useInteractions([
-    useHover(context, {delay}),
+    useHover(context, {
+      delay: groupDelay === 0 ? delay : groupDelay,
+      move: false,
+    }),
     useFocus(context),
     useRole(context, {role: 'tooltip'}),
     useDismiss(context),
   ]);
 
-  useEffect(() => {
-    if (refs.reference.current && refs.floating.current && open) {
-      return autoUpdate(refs.reference.current, refs.floating.current, update);
-    }
-  }, [refs.reference, refs.floating, update, open]);
+  useDelayGroup(context, {id});
+
+  const instantDuration = 0;
+  const openDuration = 750;
+  const closeDuration = 250;
+
+  const {isMounted, styles} = useTransitionStyles(context, {
+    duration: isInstantPhase
+      ? {
+          open: instantDuration,
+          close: currentId === id ? closeDuration : instantDuration,
+        }
+      : {
+          open: openDuration,
+          close: closeDuration,
+        },
+    initial: {
+      opacity: 0,
+      scale: '0.925',
+    },
+    common: ({side}) => ({
+      transitionTimingFunction: 'cubic-bezier(.18,.87,.4,.97)',
+      transformOrigin: {
+        top: 'bottom',
+        left: 'right',
+        bottom: 'top',
+        right: 'left',
+      }[side],
+    }),
+  });
 
   return (
     <>
       {isValidElement(children) &&
-        cloneElement(children, getReferenceProps({ref: reference}))}
-      {open && (
-        <div
-          {...getFloatingProps({
-            ref: floating,
-            className: 'Tooltip',
-            style: {
+        cloneElement(children, getReferenceProps({ref: refs.setReference}))}
+      <FloatingPortal>
+        {isMounted && (
+          <div
+            ref={refs.setFloating}
+            className="Tooltip"
+            style={{
               position: strategy,
-              top: y ?? '',
-              left: x ?? '',
-            },
-          })}
-        >
-          {label}
-        </div>
-      )}
+              top: y ?? 0,
+              left: x ?? 0,
+              ...styles,
+            }}
+            {...getFloatingProps()}
+          >
+            {label}
+          </div>
+        )}
+      </FloatingPortal>
     </>
   );
 }

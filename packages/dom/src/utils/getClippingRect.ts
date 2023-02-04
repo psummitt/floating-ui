@@ -1,38 +1,39 @@
-import {
-  rectToClientRect,
-  ClientRectObject,
+import type {
   Boundary,
-  RootBoundary,
+  ClientRectObject,
   Rect,
+  RootBoundary,
   Strategy,
 } from '@floating-ui/core';
-import {getViewportRect} from './getViewportRect';
-import {getDocumentRect} from './getDocumentRect';
-import {getOverflowAncestors} from './getOverflowAncestors';
-import {getDocumentElement} from './getDocumentElement';
-import {getComputedStyle} from './getComputedStyle';
-import {
-  isElement,
-  isLastTraversableNode,
-  isContainingBlock,
-  isHTMLElement,
-} from './is';
-import {getBoundingClientRect} from './getBoundingClientRect';
-import {max, min} from './math';
-import {getParentNode} from './getParentNode';
-import {getNodeName} from './getNodeName';
-import {getScale} from './getScale';
+import {rectToClientRect} from '@floating-ui/core';
+
 import {Platform, ReferenceElement} from '../types';
+import {getBoundingClientRect} from './getBoundingClientRect';
+import {getComputedStyle} from './getComputedStyle';
+import {getDocumentElement} from './getDocumentElement';
+import {getDocumentRect} from './getDocumentRect';
+import {getNodeName} from './getNodeName';
+import {getOverflowAncestors} from './getOverflowAncestors';
+import {getParentNode} from './getParentNode';
+import {getScale} from './getScale';
+import {getViewportRect} from './getViewportRect';
+import {
+  isContainingBlock,
+  isElement,
+  isHTMLElement,
+  isLastTraversableNode,
+} from './is';
+import {max, min} from './math';
 
 type PlatformWithCache = Platform & {
   _c: Map<ReferenceElement, Element[]>;
 };
 
-// Returns the inner client rect, subtracting scrollbars if present
+// Returns the inner client rect, subtracting scrollbars if present.
 function getInnerBoundingClientRect(
   element: Element,
   strategy: Strategy
-): ClientRectObject {
+): Rect {
   const clientRect = getBoundingClientRect(element, true, strategy === 'fixed');
   const top = clientRect.top + element.clientTop;
   const left = clientRect.left + element.clientLeft;
@@ -43,14 +44,10 @@ function getInnerBoundingClientRect(
   const y = top * scale.y;
 
   return {
-    top: y,
-    left: x,
-    right: x + width,
-    bottom: y + height,
-    x,
-    y,
     width,
     height,
+    x,
+    y,
   };
 }
 
@@ -64,7 +61,9 @@ function getClientRectFromClippingAncestor(
   }
 
   if (isElement(clippingAncestor)) {
-    return getInnerBoundingClientRect(clippingAncestor, strategy);
+    return rectToClientRect(
+      getInnerBoundingClientRect(clippingAncestor, strategy)
+    );
   }
 
   return rectToClientRect(getDocumentRect(getDocumentElement(element)));
@@ -106,10 +105,10 @@ function getClippingElementAncestors(
         );
 
     if (shouldDropCurrentNode) {
-      // Drop non-containing blocks
+      // Drop non-containing blocks.
       result = result.filter((ancestor) => ancestor !== currentNode);
     } else {
-      // Record last containing block for next iteration
+      // Record last containing block for next iteration.
       currentContainingBlockComputedStyle = computedStyle;
     }
 
@@ -122,7 +121,7 @@ function getClippingElementAncestors(
 }
 
 // Gets the maximum area that the element is visible in due to any number of
-// clipping ancestors
+// clipping ancestors.
 export function getClippingRect(
   this: PlatformWithCache,
   {

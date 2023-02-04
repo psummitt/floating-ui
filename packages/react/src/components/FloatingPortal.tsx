@@ -1,9 +1,9 @@
 import * as React from 'react';
 import {createPortal} from 'react-dom';
 import useLayoutEffect from 'use-isomorphic-layout-effect';
+
 import {useId} from '../hooks/useId';
 import {FloatingContext} from '../types';
-import {FocusGuard, HIDDEN_STYLES} from './FocusGuard';
 import {
   disableFocusInside,
   enableFocusInside,
@@ -11,13 +11,16 @@ import {
   getPreviousTabbable,
   isOutsideEvent,
 } from '../utils/tabbable';
+import {FocusGuard, HIDDEN_STYLES} from './FocusGuard';
+
+type FocusManagerState =
+  | (FloatingContext & {modal: boolean; closeOnFocusOut: boolean})
+  | null;
 
 const PortalContext = React.createContext<null | {
   preserveTabOrder: boolean;
   portalNode: HTMLElement | null;
-  setFocusManagerState: React.Dispatch<
-    React.SetStateAction<(FloatingContext & {modal: boolean}) | null>
-  >;
+  setFocusManagerState: React.Dispatch<React.SetStateAction<FocusManagerState>>;
   beforeInsideRef: React.RefObject<HTMLSpanElement>;
   afterInsideRef: React.RefObject<HTMLSpanElement>;
   beforeOutsideRef: React.RefObject<HTMLSpanElement>;
@@ -47,7 +50,9 @@ export const useFloatingPortalNode = ({
       setPortalEl(rootNode);
     } else {
       const newPortalEl = document.createElement('div');
-      newPortalEl.id = id || uniqueId;
+      if (id !== '') {
+        newPortalEl.id = id || uniqueId;
+      }
       newPortalEl.setAttribute('data-floating-ui-portal', '');
       setPortalEl(newPortalEl);
       const container = portalContext?.portalNode || document.body;
@@ -77,9 +82,8 @@ export const FloatingPortal = ({
   preserveTabOrder?: boolean;
 }) => {
   const portalNode = useFloatingPortalNode({id, enabled: !root});
-  const [focusManagerState, setFocusManagerState] = React.useState<
-    (FloatingContext & {modal: boolean}) | null
-  >(null);
+  const [focusManagerState, setFocusManagerState] =
+    React.useState<FocusManagerState>(null);
 
   const beforeOutsideRef = React.useRef<HTMLSpanElement>(null);
   const afterOutsideRef = React.useRef<HTMLSpanElement>(null);
@@ -138,6 +142,7 @@ export const FloatingPortal = ({
     >
       {shouldRenderGuards && portalNode && (
         <FocusGuard
+          data-type="outside"
           ref={beforeOutsideRef}
           onFocus={(event) => {
             if (isOutsideEvent(event, portalNode)) {
@@ -161,6 +166,7 @@ export const FloatingPortal = ({
         : null}
       {shouldRenderGuards && portalNode && (
         <FocusGuard
+          data-type="outside"
           ref={afterOutsideRef}
           onFocus={(event) => {
             if (isOutsideEvent(event, portalNode)) {
@@ -170,7 +176,8 @@ export const FloatingPortal = ({
                 getNextTabbable() ||
                 focusManagerState?.refs.domReference.current;
               nextTabbable?.focus();
-              focusManagerState?.onOpenChange(false);
+              focusManagerState?.closeOnFocusOut &&
+                focusManagerState?.onOpenChange(false);
             }
           }}
         />

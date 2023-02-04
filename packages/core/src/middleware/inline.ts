@@ -1,7 +1,7 @@
 import type {Middleware, Padding} from '../types';
-import {getSide} from '../utils/getSide';
 import {getMainAxisFromPlacement} from '../utils/getMainAxisFromPlacement';
 import {getSideObjectFromPadding} from '../utils/getPaddingObject';
+import {getSide} from '../utils/getSide';
 import {max, min} from '../utils/math';
 import {rectToClientRect} from '../utils/rectToClientRect';
 
@@ -19,7 +19,7 @@ export interface Options {
   y: number;
 
   /**
-   * @experimental
+   * Represents the padding around a disjoined rect when choosing it.
    * @default 2
    */
   padding: Padding;
@@ -51,18 +51,18 @@ export const inline = (options: Partial<Options> = {}): Middleware => ({
         : rects.reference
     );
     const clientRects =
-      (await platform.getClientRects?.(elements.reference)) ?? [];
+      (await platform.getClientRects?.(elements.reference)) || [];
     const paddingObject = getSideObjectFromPadding(padding);
 
     function getBoundingClientRect() {
-      // There are two rects and they are disjoined
+      // There are two rects and they are disjoined.
       if (
         clientRects.length === 2 &&
         clientRects[0].left > clientRects[1].right &&
         x != null &&
         y != null
       ) {
-        // Find the first rect in which the point is fully inside
+        // Find the first rect in which the point is fully inside.
         return (
           clientRects.find(
             (rect) =>
@@ -70,11 +70,11 @@ export const inline = (options: Partial<Options> = {}): Middleware => ({
               x < rect.right + paddingObject.right &&
               y > rect.top - paddingObject.top &&
               y < rect.bottom + paddingObject.bottom
-          ) ?? fallback
+          ) || fallback
         );
       }
 
-      // There are 2 or more connected rects
+      // There are 2 or more connected rects.
       if (clientRects.length >= 2) {
         if (getMainAxisFromPlacement(placement) === 'x') {
           const firstRect = clientRects[0];

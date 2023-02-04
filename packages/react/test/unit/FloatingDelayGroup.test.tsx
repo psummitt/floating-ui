@@ -1,14 +1,15 @@
-import {cloneElement, useState} from 'react';
-import {render, screen, fireEvent} from '@testing-library/react';
-import {
-  useFloating,
-  useInteractions,
-  useHover,
-  useDelayGroupContext,
-  useDelayGroup,
-  FloatingDelayGroup,
-} from '../../src';
+import {fireEvent, render, screen} from '@testing-library/react';
 import {act} from '@testing-library/react-hooks';
+import {cloneElement, useState} from 'react';
+
+import {
+  FloatingDelayGroup,
+  useDelayGroup,
+  useDelayGroupContext,
+  useFloating,
+  useHover,
+  useInteractions,
+} from '../../src';
 
 jest.useFakeTimers();
 
@@ -18,15 +19,12 @@ interface Props {
 }
 
 export const Tooltip = ({children, label}: Props) => {
-  const {delay, setCurrentId} = useDelayGroupContext();
+  const {delay} = useDelayGroupContext();
   const [open, setOpen] = useState(false);
 
   const {x, y, reference, floating, strategy, context} = useFloating({
     open,
-    onOpenChange(open) {
-      setOpen(open);
-      open && setCurrentId(label);
-    },
+    onOpenChange: setOpen,
   });
 
   const {getReferenceProps} = useInteractions([

@@ -1,9 +1,10 @@
 import * as React from 'react';
+
 import type {ElementProps, FloatingContext, ReferenceType} from '../types';
 import {activeElement} from '../utils/activeElement';
 import {contains} from '../utils/contains';
 import {getDocument} from '../utils/getDocument';
-import {isHTMLElement, isElement} from '../utils/is';
+import {isElement, isHTMLElement} from '../utils/is';
 import {isEventTargetWithin} from '../utils/isEventTargetWithin';
 import {DismissPayload} from './useDismiss';
 
@@ -17,7 +18,14 @@ export interface Props {
  * @see https://floating-ui.com/docs/useFocus
  */
 export const useFocus = <RT extends ReferenceType = ReferenceType>(
-  {open, onOpenChange, dataRef, refs, events}: FloatingContext<RT>,
+  {
+    open,
+    onOpenChange,
+    dataRef,
+    events,
+    refs,
+    elements: {floating, domReference},
+  }: FloatingContext<RT>,
   {enabled = true, keyboardOnly = true}: Props = {}
 ): ElementProps => {
   const pointerTypeRef = React.useRef('');
@@ -29,8 +37,8 @@ export const useFocus = <RT extends ReferenceType = ReferenceType>(
       return;
     }
 
-    const doc = getDocument(refs.floating.current);
-    const win = doc.defaultView ?? window;
+    const doc = getDocument(floating);
+    const win = doc.defaultView || window;
 
     // If the reference was focused and the user left the tab/window, and the
     // floating element was not open, the focus should be blocked when they
@@ -38,9 +46,8 @@ export const useFocus = <RT extends ReferenceType = ReferenceType>(
     function onBlur() {
       if (
         !open &&
-        isHTMLElement(refs.domReference.current) &&
-        refs.domReference.current ===
-          activeElement(getDocument(refs.domReference.current))
+        isHTMLElement(domReference) &&
+        domReference === activeElement(getDocument(domReference))
       ) {
         blockFocusRef.current = true;
       }
@@ -50,7 +57,7 @@ export const useFocus = <RT extends ReferenceType = ReferenceType>(
     return () => {
       win.removeEventListener('blur', onBlur);
     };
-  }, [refs, open, enabled]);
+  }, [floating, domReference, open, enabled]);
 
   React.useEffect(() => {
     if (!enabled) {
@@ -100,10 +107,7 @@ export const useFocus = <RT extends ReferenceType = ReferenceType>(
             event.type === 'focus' &&
             dataRef.current.openEvent?.type === 'mousedown' &&
             dataRef.current.openEvent &&
-            isEventTargetWithin(
-              dataRef.current.openEvent,
-              refs.domReference.current
-            )
+            isEventTargetWithin(dataRef.current.openEvent, domReference)
           ) {
             return;
           }
@@ -119,7 +123,8 @@ export const useFocus = <RT extends ReferenceType = ReferenceType>(
           // moved into the floating element immediately after.
           const movedToFocusGuard =
             isElement(relatedTarget) &&
-            relatedTarget.hasAttribute('data-floating-ui-focus-guard');
+            relatedTarget.hasAttribute('data-floating-ui-focus-guard') &&
+            relatedTarget.getAttribute('data-type') === 'outside';
 
           // Wait for the window blur listener to fire.
           timeoutRef.current = setTimeout(() => {
@@ -128,7 +133,7 @@ export const useFocus = <RT extends ReferenceType = ReferenceType>(
             // Note: it must be focusable, e.g. `tabindex="-1"`.
             if (
               contains(refs.floating.current, relatedTarget) ||
-              contains(refs.domReference.current, relatedTarget) ||
+              contains(domReference, relatedTarget) ||
               movedToFocusGuard
             ) {
               return;
@@ -139,5 +144,5 @@ export const useFocus = <RT extends ReferenceType = ReferenceType>(
         },
       },
     };
-  }, [enabled, keyboardOnly, refs, dataRef, onOpenChange]);
+  }, [enabled, keyboardOnly, domReference, refs, dataRef, onOpenChange]);
 };
