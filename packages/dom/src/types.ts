@@ -34,7 +34,7 @@ export interface Platform {
     rootBoundary: RootBoundary;
     strategy: Strategy;
   }) => Promisable<Rect>;
-  getDimensions: (element: HTMLElement) => Promisable<Dimensions>;
+  getDimensions: (element: Element) => Promisable<Dimensions>;
 
   // Optional
   convertOffsetParentRelativeRectToViewportRelativeRect?: (args: {

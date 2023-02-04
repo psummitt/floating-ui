@@ -36,8 +36,7 @@ type Node =
   | 'offsetParent-3d'
   | 'offsetParent-inverse'
   | 'offsetParent-reference'
-  | 'virtual'
-  | 'inline';
+  | 'virtual';
 const NODES: Node[] = [
   null,
   'reference',
@@ -49,7 +48,6 @@ const NODES: Node[] = [
   'offsetParent-inverse',
   'offsetParent-reference',
   'virtual',
-  'inline',
 ];
 
 export function Transform() {
@@ -75,7 +73,6 @@ export function Transform() {
       case 'offsetParent-inverse':
       case 'offsetParent-reference':
       case 'virtual':
-      case 'inline':
         element = offsetParentRef.current;
         break;
       default:
@@ -130,38 +127,36 @@ export function Transform() {
           position: node === 'offsetParent' ? 'relative' : undefined,
         }}
       >
-        <span style={{position: node === 'inline' ? 'relative' : undefined}}>
-          {node === 'virtual' && (
-            <div
-              id="virtual-context"
-              style={{width: 50, height: 50, background: 'black'}}
-            />
-          )}
+        {node === 'virtual' && (
           <div
-            ref={reference}
-            className="reference"
-            style={{
-              transform: node?.includes('reference')
-                ? 'scale(1.25) translate(2rem, -2rem)'
-                : '',
-            }}
-          >
-            Reference
-          </div>
-          <div
-            ref={floating}
-            className="floating"
-            style={{
-              position: strategy,
-              top: y ?? '',
-              left: x ?? '',
-              transform: node === 'floating' ? 'scale(1.25)' : '',
-              transformOrigin: 'top',
-            }}
-          >
-            Floating
-          </div>
-        </span>
+            id="virtual-context"
+            style={{width: 50, height: 50, background: 'black'}}
+          />
+        )}
+        <div
+          ref={reference}
+          className="reference"
+          style={{
+            transform: node?.includes('reference')
+              ? 'scale(1.25) translate(2rem, -2rem)'
+              : '',
+          }}
+        >
+          Reference
+        </div>
+        <div
+          ref={floating}
+          className="floating"
+          style={{
+            position: strategy,
+            top: y ?? '',
+            left: x ?? '',
+            transform: node === 'floating' ? 'scale(1.25)' : '',
+            transformOrigin: 'top',
+          }}
+        >
+          Floating
+        </div>
       </div>
 
       <Controls>

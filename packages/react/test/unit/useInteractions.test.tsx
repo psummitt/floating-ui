@@ -88,6 +88,7 @@ test('prop getters are memoized', () => {
     c;
 
     const handleClose = () => () => {};
+    handleClose.__options = {blockPointerEvents: false};
 
     const listRef = useRef([]);
     const overflowRef = useRef({top: 0, left: 0, bottom: 0, right: 0});

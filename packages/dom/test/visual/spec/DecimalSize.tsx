@@ -1,5 +1,5 @@
 import type {Dimensions} from '@floating-ui/core';
-import {useFloating, size as sizeM} from '@floating-ui/react-dom';
+import {useFloating} from '@floating-ui/react-dom';
 import {useState, useLayoutEffect} from 'react';
 import {Controls} from '../utils/Controls';
 
@@ -13,20 +13,9 @@ export function DecimalSize() {
     width: INTEGER,
     height: INTEGER,
   });
-  const [truncate, setTruncate] = useState(false);
-  const {x, y, reference, floating, strategy, update} = useFloating({
-    middleware: [
-      sizeM({
-        apply({elements, rects}) {
-          Object.assign(elements.floating.style, {
-            width: `${rects.floating.width}px`,
-          });
-        },
-      }),
-    ],
-  });
+  const {x, y, reference, floating, strategy, update} = useFloating();
 
-  useLayoutEffect(update, [size, truncate, update]);
+  useLayoutEffect(update, [size, update]);
 
   return (
     <>
@@ -47,19 +36,10 @@ export function DecimalSize() {
             position: strategy,
             top: y ?? '',
             left: x ?? '',
-            ...(truncate
-              ? {
-                  width: 'auto',
-                  height: 'auto',
-                  display: 'block',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }
-              : size),
+            ...size,
           }}
         >
-          {truncate ? 'Long text that will be truncated' : 'Floating'}
+          Floating
         </div>
       </div>
 
@@ -80,22 +60,6 @@ export function DecimalSize() {
             }}
           >
             {localSize}
-          </button>
-        ))}
-      </Controls>
-
-      <h2>Truncate</h2>
-      <Controls>
-        {[true, false].map((localTruncate) => (
-          <button
-            key={String(localTruncate)}
-            data-testid={`truncate-${localTruncate}`}
-            onClick={() => setTruncate(localTruncate)}
-            style={{
-              backgroundColor: truncate === localTruncate ? 'black' : '',
-            }}
-          >
-            {String(localTruncate)}
           </button>
         ))}
       </Controls>

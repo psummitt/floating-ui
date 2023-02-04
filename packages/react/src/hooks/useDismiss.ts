@@ -24,19 +24,8 @@ const captureHandlerKeys = {
   click: 'onClickCapture',
 };
 
-export const normalizeBubblesProp = (
-  bubbles: boolean | {escapeKey?: boolean; outsidePress?: boolean} = true
-) => {
-  return {
-    escapeKeyBubbles:
-      typeof bubbles === 'boolean' ? bubbles : bubbles.escapeKey ?? true,
-    outsidePressBubbles:
-      typeof bubbles === 'boolean' ? bubbles : bubbles.outsidePress ?? true,
-  };
-};
-
 export interface DismissPayload {
-  type: 'outsidePress' | 'referencePress' | 'escapeKey' | 'mouseLeave';
+  type: 'outsidePress' | 'referencePress' | 'escapeKey';
   data: {
     returnFocus: boolean | {preventScroll: boolean};
   };
@@ -50,7 +39,7 @@ export interface Props {
   outsidePress?: boolean | ((event: MouseEvent) => boolean);
   outsidePressEvent?: 'pointerdown' | 'mousedown' | 'click';
   ancestorScroll?: boolean;
-  bubbles?: boolean | {escapeKey?: boolean; outsidePress?: boolean};
+  bubbles?: boolean;
 }
 
 /**
@@ -82,7 +71,6 @@ export const useDismiss = <RT extends ReferenceType = ReferenceType>(
       ? outsidePressFn
       : unstable_outsidePress;
   const insideReactTreeRef = React.useRef(false);
-  const {escapeKeyBubbles, outsidePressBubbles} = normalizeBubblesProp(bubbles);
 
   React.useEffect(() => {
     if (!open || !enabled) {
@@ -92,7 +80,7 @@ export const useDismiss = <RT extends ReferenceType = ReferenceType>(
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         if (
-          !escapeKeyBubbles &&
+          !bubbles &&
           tree &&
           getChildren(tree.nodesRef.current, nodeId).length > 0
         ) {
@@ -166,7 +154,7 @@ export const useDismiss = <RT extends ReferenceType = ReferenceType>(
       }
 
       if (
-        !outsidePressBubbles &&
+        !bubbles &&
         tree &&
         getChildren(tree.nodesRef.current, nodeId).length > 0
       ) {
@@ -248,8 +236,7 @@ export const useDismiss = <RT extends ReferenceType = ReferenceType>(
     onOpenChange,
     ancestorScroll,
     enabled,
-    escapeKeyBubbles,
-    outsidePressBubbles,
+    bubbles,
     refs,
     nested,
   ]);

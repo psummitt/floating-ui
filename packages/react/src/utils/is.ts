@@ -66,9 +66,3 @@ export function isMac() {
     getPlatform().toLowerCase().startsWith('mac') && !navigator.maxTouchPoints
   );
 }
-
-export function isMouseLikePointerType(pointerType: string | undefined) {
-  // On some Linux machines with Chromium, mouse inputs return a `pointerType`
-  // of "pen": https://github.com/floating-ui/floating-ui/issues/2015
-  return ['mouse', 'pen', '', undefined].includes(pointerType);
-}

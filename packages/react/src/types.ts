@@ -79,7 +79,6 @@ export type UseFloatingReturn<RT extends ReferenceType = ReferenceType> =
     update: () => void;
     reference: (node: RT | null) => void;
     floating: (node: HTMLElement | null) => void;
-    positionReference: (node: RT | null) => void;
     context: FloatingContext<RT>;
     refs: ExtendedRefs<RT>;
   };

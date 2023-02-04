@@ -8,7 +8,6 @@ interface GroupState {
   delay: Delay;
   initialDelay: Delay;
   currentId: any;
-  timeoutMs: number;
 }
 
 interface GroupContext extends GroupState {
@@ -22,9 +21,8 @@ const FloatingDelayGroupContext = React.createContext<
     setState: React.Dispatch<React.SetStateAction<GroupState>>;
   }
 >({
-  delay: 0,
-  initialDelay: 0,
-  timeoutMs: 0,
+  delay: 1000,
+  initialDelay: 1000,
   currentId: null,
   setCurrentId: () => {},
   setState: () => {},
@@ -41,15 +39,12 @@ export const useDelayGroupContext = (): GroupContext =>
 export const FloatingDelayGroup = ({
   children,
   delay,
-  timeoutMs = 0,
 }: {
   children?: React.ReactNode;
   delay: Delay;
-  timeoutMs?: number;
 }): JSX.Element => {
   const [state, setState] = React.useState<GroupState>({
     delay,
-    timeoutMs,
     initialDelay: delay,
     currentId: null,
   });
@@ -78,13 +73,10 @@ export const useDelayGroup = (
   {open, onOpenChange}: FloatingContext,
   {id}: UseGroupOptions
 ) => {
-  const {currentId, initialDelay, setState, timeoutMs} = useDelayGroupContext();
-  const timeoutIdRef = React.useRef<number>();
+  const {currentId, initialDelay, setState} = useDelayGroupContext();
 
   React.useEffect(() => {
     if (currentId) {
-      clearTimeout(timeoutIdRef.current);
-
       setState((state) => ({
         ...state,
         delay: {open: 1, close: getDelay(initialDelay, 'close')},
@@ -97,25 +89,9 @@ export const useDelayGroup = (
   }, [id, onOpenChange, setState, currentId, initialDelay]);
 
   React.useEffect(() => {
-    function unset() {
+    if (!open && currentId === id) {
       onOpenChange(false);
       setState((state) => ({...state, delay: initialDelay, currentId: null}));
     }
-
-    clearTimeout(timeoutIdRef.current);
-
-    if (!open && currentId === id) {
-      if (timeoutMs) {
-        timeoutIdRef.current = window.setTimeout(unset, timeoutMs);
-      } else {
-        unset();
-      }
-    }
-  }, [open, setState, currentId, id, onOpenChange, initialDelay, timeoutMs]);
-
-  React.useEffect(() => {
-    return () => {
-      clearTimeout(timeoutIdRef.current);
-    };
-  }, []);
+  }, [open, setState, currentId, id, onOpenChange, initialDelay]);
 };

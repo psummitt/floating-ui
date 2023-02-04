@@ -200,7 +200,12 @@ export function FloatingFocusManager<RT extends ReferenceType = ReferenceType>({
         contains(floating, relatedTarget) ||
         contains(relatedTarget, floating) ||
         contains(portalContext?.portalNode, relatedTarget) ||
-        relatedTarget?.hasAttribute('data-floating-ui-focus-guard') ||
+        [
+          portalContext?.beforeOutsideRef.current,
+          portalContext?.afterOutsideRef.current,
+        ]
+          .filter(Boolean)
+          .includes(relatedTarget as HTMLSpanElement | null) ||
         (tree &&
           (getChildren(tree.nodesRef.current, nodeId).find(
             (node) =>
@@ -342,7 +347,7 @@ export function FloatingFocusManager<RT extends ReferenceType = ReferenceType>({
         previouslyFocusedElementRef.current = refs.domReference.current;
       }
 
-      if (['referencePress', 'escapeKey'].includes(payload.type)) {
+      if (payload.type !== 'outsidePress') {
         return;
       }
 

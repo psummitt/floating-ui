@@ -30,4 +30,3 @@ export {useFocus} from './hooks/useFocus';
 export {useHover} from './hooks/useHover';
 export {useListNavigation} from './hooks/useListNavigation';
 export {useTypeahead} from './hooks/useTypeahead';
-export {useMergeRefs} from './hooks/useMergeRefs';
